@@ -20,11 +20,12 @@ export async function searchPartners(query = '') {
   return data.map((item) => ({
     id: item.id,
     name: item.name,
-    recipientName: item.recipient_name,
-    senderName: item.sender_name,
-    bankAccount: item.bank_account,
-    invoiceRemark: item.invoice_remark,
-    paymentTerms: item.payment_terms,
+    ciUrl: item.ci_url,
+    recipientName: item.recipient_name || item.name,
+    senderName: item.sender_name || '',
+    bankAccount: item.bank_account || '',
+    invoiceRemark: item.invoice_remark || '',
+    paymentTerms: item.payment_terms || '',
   }));
 }
 

@@ -604,6 +604,7 @@ function MasterDataManager({ onClose }) {
   const [newHotelEnglish, setNewHotelEnglish] = useState('');
   const [newHotelKorean, setNewHotelKorean] = useState('');
   const [newRoom, setNewRoom] = useState('');
+  const [newPartnerCi, setNewPartnerCi] = useState('');
   const [newPartner, setNewPartner] = useState('');
 
   const countries = Array.from(new Set(hotels.map((hotel) => hotel.country).filter(Boolean)));
@@ -674,6 +675,7 @@ function MasterDataManager({ onClose }) {
       {
         id: makeId(),
         name: trimmed,
+        ciUrl: newPartnerCi.trim(),
         recipientName: trimmed,
         senderName: '',
         bankAccount: '',
@@ -681,6 +683,7 @@ function MasterDataManager({ onClose }) {
         paymentTerms: '',
       },
     ]);
+    setNewPartnerCi('');
     setNewPartner('');
   }
 
@@ -722,12 +725,19 @@ function MasterDataManager({ onClose }) {
               <div className="agency-list">
                 {partners.map((partner) => (
                   <button className="agency-row" key={partner.id} type="button">
-                    <span>{partner.name.slice(0, 4).toUpperCase()}</span>
+                    <span>
+                      {partner.ciUrl ? <img src={partner.ciUrl} alt="" /> : partner.name.slice(0, 4).toUpperCase()}
+                    </span>
                     <strong>{partner.name}</strong>
                   </button>
                 ))}
               </div>
-              <footer>
+              <footer className="agency-add">
+                <input
+                  value={newPartnerCi}
+                  onChange={(event) => setNewPartnerCi(event.target.value)}
+                  placeholder="여행사 CI URL"
+                />
                 <input value={newPartner} onChange={(event) => setNewPartner(event.target.value)} placeholder="여행사명" />
                 <button className="master-add" type="button" onClick={addPartner}>+</button>
               </footer>

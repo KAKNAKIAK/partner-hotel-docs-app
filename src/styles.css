@@ -945,6 +945,10 @@ th {
   grid-template-columns: 1fr 1fr 38px !important;
 }
 
+.agency-add {
+  grid-template-columns: 1fr 1fr 38px !important;
+}
+
 .master-detail {
   display: flex;
   flex-direction: column;
@@ -1028,6 +1032,14 @@ th {
   background: #eff6ff;
   font-size: 9px;
   font-weight: 900;
+  overflow: hidden;
+}
+
+.agency-row img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .agency-row strong {
@@ -1127,7 +1139,8 @@ th {
     flex: 0 0 112px;
   }
 
-  .hotel-add {
+  .hotel-add,
+  .agency-add {
     grid-template-columns: 1fr !important;
   }
 

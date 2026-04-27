@@ -2,6 +2,7 @@ export const partners = [
   {
     id: 'partner-naeil',
     name: '내일 투어',
+    ciUrl: '',
     recipientName: '내일 투어',
     senderName: '에이앤드티 / 권혜원 상무, 김영애 부장',
     bankAccount: '국민은행 806401-00-080724 / 예금주: 주식회사에이앤드티',
@@ -11,6 +12,7 @@ export const partners = [
   {
     id: 'partner-sample',
     name: '샘플 여행사',
+    ciUrl: '',
     recipientName: '샘플 여행사 호텔팀',
     senderName: '에이앤드티 / 호텔 정산팀',
     bankAccount: '국민은행 806401-00-080724 / 예금주: 주식회사에이앤드티',

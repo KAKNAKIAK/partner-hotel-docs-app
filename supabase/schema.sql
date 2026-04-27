@@ -1,11 +1,7 @@
 create table if not exists public.partners (
   id uuid primary key default gen_random_uuid(),
   name text not null,
-  recipient_name text,
-  sender_name text,
-  bank_account text,
-  invoice_remark text,
-  payment_terms text,
+  ci_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -65,9 +61,9 @@ create policy "reservations read anon" on public.reservations for select using (
 create policy "reservations insert anon" on public.reservations for insert with check (true);
 create policy "reservations update anon" on public.reservations for update using (true) with check (true);
 
-insert into public.partners (name, recipient_name, sender_name, bank_account, invoice_remark, payment_terms)
+insert into public.partners (name, ci_url)
 values
-  ('내일 투어', '내일 투어', '에이앤드티 / 권혜원 상무, 김영애 부장', '국민은행 806401-00-080724 / 예금주: 주식회사에이앤드티', '상기 금액을 청구하오니 확인 후 입금을 부탁드립니다.', 'Room payment will be charged in agent')
+  ('내일 투어', null)
 on conflict do nothing;
 
 insert into public.hotels (name, country, city, address, phone, default_notice, default_meal_plan)
