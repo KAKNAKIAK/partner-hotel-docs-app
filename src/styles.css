@@ -529,8 +529,8 @@ select:focus {
 
 .invoice-company {
   display: grid;
-  grid-template-columns: 58px minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
   align-items: start;
   justify-self: end;
   width: 250px;
@@ -542,8 +542,9 @@ select:focus {
 
 .invoice-company img {
   display: block;
-  width: 58px;
-  height: 42px;
+  width: 92px;
+  height: 44px;
+  margin-bottom: 2px;
   object-fit: contain;
 }
 
@@ -678,8 +679,8 @@ th {
 .invoice-seal {
   display: block;
   flex: 0 0 auto;
-  width: 86px;
-  height: 86px;
+  width: 172px;
+  height: 172px;
   object-fit: contain;
 }
 
