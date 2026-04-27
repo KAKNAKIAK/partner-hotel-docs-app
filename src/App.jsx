@@ -254,6 +254,10 @@ function App() {
     patch({
       companyId: company.id,
       companyName: company.name,
+      companyCiUrl: company.ciUrl,
+      companyAddress: company.address,
+      companyPhone: company.phone,
+      companyEmail: company.email,
       companySealUrl: company.sealUrl,
       senderName: company.name,
       bankAccount: company.bankAccount,
@@ -1638,8 +1642,21 @@ function DocumentPreview({ tab, reservation, foreignTotal, krwTotal, warnings })
 function Invoice({ reservation, foreignTotal, krwTotal }) {
   return (
     <article className="document">
-      <div className="doc-kicker">Payment Request</div>
-      <h2 className="doc-title">INVOICE</h2>
+      <div className="invoice-head">
+        <div>
+          <div className="doc-kicker">Payment Request</div>
+          <h2 className="doc-title">INVOICE</h2>
+        </div>
+        <div className="invoice-company">
+          {reservation.companyCiUrl && <img src={reservation.companyCiUrl} alt="" />}
+          <div>
+            <strong>{reservation.companyName || reservation.senderName || '업체 정보'}</strong>
+            {reservation.companyAddress && <span>{reservation.companyAddress}</span>}
+            {reservation.companyPhone && <span>{reservation.companyPhone}</span>}
+            {reservation.companyEmail && <span>{reservation.companyEmail}</span>}
+          </div>
+        </div>
+      </div>
       <div className="doc-rule" />
       <div className="doc-grid">
         <DocBox label="수신" value={reservation.partnerName} />

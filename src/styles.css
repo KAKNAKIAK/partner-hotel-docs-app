@@ -520,6 +520,44 @@ select:focus {
   line-height: 1.15;
 }
 
+.invoice-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 250px;
+  gap: 24px;
+  align-items: start;
+}
+
+.invoice-company {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  justify-self: end;
+  width: 250px;
+  color: #334155;
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.invoice-company img {
+  display: block;
+  width: 58px;
+  height: 42px;
+  object-fit: contain;
+}
+
+.invoice-company strong,
+.invoice-company span {
+  display: block;
+}
+
+.invoice-company strong {
+  margin-bottom: 4px;
+  color: var(--navy);
+  font-size: 12px;
+}
+
 .doc-rule {
   height: 2px;
   margin: 20px 0 24px;
