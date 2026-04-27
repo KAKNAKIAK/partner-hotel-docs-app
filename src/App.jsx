@@ -1,9 +1,18 @@
 import { cloneElement, isValidElement, useEffect, useId, useMemo, useState } from 'react';
-import { hotels as seedHotels, initialReservation, partners as seedPartners } from './data.js';
-import { saveReservation, searchHotels, searchPartners } from './api.js';
+import { initialReservation } from './data.js';
+import {
+  createHotel,
+  createPartner,
+  listHotels,
+  listPartners,
+  loadLatestReservation,
+  saveReservation,
+  searchHotels,
+  searchPartners,
+  updateHotel,
+  updatePartner,
+} from './api.js';
 import { hasSupabaseConfig } from './supabaseClient.js';
-
-const STORAGE_KEY = 'partnerHotelDocsReactDraftV1';
 
 function makeId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -255,26 +264,27 @@ function App() {
     saveReservation(reservation)
       .then((saved) => {
         setReservation((current) => ({ ...current, id: saved.id || current.id }));
-        setSaveState(hasSupabaseConfig ? 'Supabase 저장 완료' : '브라우저 임시 저장 완료');
+        setSaveState('Supabase 저장 완료');
       })
       .catch((error) => {
         console.error(error);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(reservation));
-        setSaveState('원격 저장 실패, 브라우저에 임시 저장');
+        setSaveState('Supabase 저장 실패');
       });
   }
 
   function loadDraft() {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) {
-      alert('저장된 임시 데이터가 없습니다.');
-      return;
-    }
-    try {
-      setReservation({ ...initialReservation, ...JSON.parse(saved) });
-    } catch {
-      alert('임시 저장 데이터를 불러오지 못했습니다.');
-    }
+    loadLatestReservation()
+      .then((saved) => {
+        if (!saved) {
+          alert('Supabase에 저장된 예약이 없습니다.');
+          return;
+        }
+        setReservation({ ...initialReservation, ...saved });
+      })
+      .catch((error) => {
+        console.error(error);
+        alert('Supabase 예약 데이터를 불러오지 못했습니다.');
+      });
   }
 
   const tabs = [
@@ -580,8 +590,8 @@ function App() {
             </div>
             <div className="side-body">
               <p className="quick-note">
-                현재 데이터 소스: {hasSupabaseConfig ? 'Supabase' : 'mock/localStorage fallback'}<br />
-                {saveState || 'Supabase 환경변수를 설정하면 검색과 저장이 원격 DB로 연결됩니다.'}
+                현재 데이터 소스: {hasSupabaseConfig ? 'Supabase' : 'Supabase 환경변수 미설정'}<br />
+                {saveState || '검색, 저장, 마스터 관리는 Supabase DB와 직접 연결됩니다.'}
               </p>
             </div>
           </section>
@@ -596,12 +606,12 @@ function MasterDataManager({ onClose }) {
   const ciInputId = useId();
   const hotelViInputId = useId();
   const [activeTab, setActiveTab] = useState('hotels');
-  const [partners, setPartners] = useState(seedPartners);
-  const [hotels, setHotels] = useState(seedHotels);
-  const [selectedPartnerId, setSelectedPartnerId] = useState(seedPartners[0]?.id || '');
-  const [selectedCountry, setSelectedCountry] = useState(seedHotels[0]?.country || 'Vietnam');
-  const [selectedCity, setSelectedCity] = useState(seedHotels[0]?.city || 'Nha Trang');
-  const [selectedHotelId, setSelectedHotelId] = useState(seedHotels[0]?.id || '');
+  const [partners, setPartners] = useState([]);
+  const [hotels, setHotels] = useState([]);
+  const [selectedPartnerId, setSelectedPartnerId] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState('');
+  const [selectedCity, setSelectedCity] = useState('');
+  const [selectedHotelId, setSelectedHotelId] = useState('');
   const [newCountry, setNewCountry] = useState('');
   const [newCity, setNewCity] = useState('');
   const [newHotelEnglish, setNewHotelEnglish] = useState('');
@@ -610,6 +620,7 @@ function MasterDataManager({ onClose }) {
   const [newPartner, setNewPartner] = useState('');
   const [isCiDragging, setIsCiDragging] = useState(false);
   const [isHotelViDragging, setIsHotelViDragging] = useState(false);
+  const [masterState, setMasterState] = useState('불러오는 중');
 
   const countries = Array.from(new Set(hotels.map((hotel) => hotel.country).filter(Boolean)));
   const cities = Array.from(
@@ -624,6 +635,28 @@ function MasterDataManager({ onClose }) {
     'Executive Deluxe Garden View',
     'Executive Deluxe Sea View',
   ];
+
+  useEffect(() => {
+    let ignore = false;
+    Promise.all([listPartners(), listHotels()])
+      .then(([partnerRows, hotelRows]) => {
+        if (ignore) return;
+        setPartners(partnerRows);
+        setHotels(hotelRows);
+        setSelectedPartnerId(partnerRows[0]?.id || '');
+        setSelectedCountry(hotelRows[0]?.country || '');
+        setSelectedCity(hotelRows[0]?.city || '');
+        setSelectedHotelId(hotelRows[0]?.id || '');
+        setMasterState('Supabase 연결 완료');
+      })
+      .catch((error) => {
+        console.error(error);
+        if (!ignore) setMasterState('Supabase 데이터를 불러오지 못했습니다');
+      });
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   function addCountry() {
     const trimmed = newCountry.trim();
@@ -655,10 +688,19 @@ function MasterDataManager({ onClose }) {
       defaultMealPlan: '',
       rooms: [],
     };
-    setHotels((current) => [...current, hotel]);
-    setSelectedHotelId(hotel.id);
-    setNewHotelEnglish('');
-    setNewHotelKorean('');
+    setMasterState('호텔 저장 중');
+    createHotel(hotel)
+      .then((saved) => {
+        setHotels((current) => [...current, saved]);
+        setSelectedHotelId(saved.id);
+        setNewHotelEnglish('');
+        setNewHotelKorean('');
+        setMasterState('호텔 저장 완료');
+      })
+      .catch((error) => {
+        console.error(error);
+        setMasterState('호텔 저장 실패');
+      });
   }
 
   function updateSelectedHotel(changes) {
@@ -686,9 +728,18 @@ function MasterDataManager({ onClose }) {
       invoiceRemark: '',
       paymentTerms: '',
     };
-    setPartners((current) => [...current, partner]);
-    setSelectedPartnerId(partner.id);
-    setNewPartner('');
+    setMasterState('여행사 저장 중');
+    createPartner(partner)
+      .then((saved) => {
+        setPartners((current) => [...current, saved]);
+        setSelectedPartnerId(saved.id);
+        setNewPartner('');
+        setMasterState('여행사 저장 완료');
+      })
+      .catch((error) => {
+        console.error(error);
+        setMasterState('여행사 저장 실패');
+      });
   }
 
   function updateSelectedPartner(changes) {
@@ -696,6 +747,20 @@ function MasterDataManager({ onClose }) {
     setPartners((current) => current.map((partner) => (
       partner.id === selectedPartner.id ? { ...partner, ...changes } : partner
     )));
+  }
+
+  function saveSelectedPartner() {
+    if (!selectedPartner) return;
+    setMasterState('여행사 수정 중');
+    updatePartner(selectedPartner)
+      .then((saved) => {
+        setPartners((current) => current.map((partner) => (partner.id === saved.id ? saved : partner)));
+        setMasterState('여행사 수정 완료');
+      })
+      .catch((error) => {
+        console.error(error);
+        setMasterState('여행사 수정 실패');
+      });
   }
 
   function loadPartnerCi(file) {
@@ -728,6 +793,20 @@ function MasterDataManager({ onClose }) {
     loadHotelVi(event.dataTransfer.files?.[0]);
   }
 
+  function saveSelectedHotel() {
+    if (!selectedHotel) return;
+    setMasterState('호텔 수정 중');
+    updateHotel(selectedHotel)
+      .then((saved) => {
+        setHotels((current) => current.map((hotel) => (hotel.id === saved.id ? saved : hotel)));
+        setMasterState('호텔 수정 완료');
+      })
+      .catch((error) => {
+        console.error(error);
+        setMasterState('호텔 수정 실패');
+      });
+  }
+
   const tabs = [
     ['hotels', '호텔 정보'],
     ['partners', '여행사'],
@@ -740,6 +819,7 @@ function MasterDataManager({ onClose }) {
           <div>
             <span className="master-icon">▣</span>
             <h2>마스터 데이터 관리</h2>
+            <span className="master-state">{masterState}</span>
           </div>
           <button className="master-close" type="button" onClick={onClose} aria-label="마스터 데이터 관리 닫기">
             ×
@@ -815,7 +895,7 @@ function MasterDataManager({ onClose }) {
                     })}
                   />
                 </Field>
-                <button className="btn btn-primary btn-small" type="button">저장</button>
+                <button className="btn btn-primary btn-small" type="button" onClick={saveSelectedPartner}>저장</button>
               </div>
             </div>
           </section>
@@ -908,7 +988,7 @@ function MasterDataManager({ onClose }) {
                       onChange={(event) => updateSelectedHotel({ phone: event.target.value })}
                     />
                   </Field>
-                  <button className="btn btn-primary btn-small" type="button">저장</button>
+                  <button className="btn btn-primary btn-small" type="button" onClick={saveSelectedHotel}>저장</button>
                 </div>
               </div>
               <div className="master-card room-card">

@@ -1,15 +1,42 @@
-import { hotels as mockHotels, partners as mockPartners } from './data.js';
-import { hasSupabaseConfig, supabaseFetch } from './supabaseClient.js';
+import { supabaseFetch } from './supabaseClient.js';
 
-function includesQuery(value, query) {
-  return String(value || '').toLowerCase().includes(String(query || '').trim().toLowerCase());
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function partnerFromRow(item) {
+  return {
+    id: item.id,
+    name: item.name || '',
+    ciUrl: item.ci_url || '',
+    recipientName: item.name || '',
+    senderName: '',
+    bankAccount: '',
+    invoiceRemark: '',
+    paymentTerms: '',
+  };
+}
+
+function hotelFromRow(item) {
+  return {
+    id: item.id,
+    name: item.name || '',
+    koreanName: item.korean_name || '',
+    country: item.country || '',
+    city: item.city || '',
+    logoUrl: item.logo_url || '',
+    address: item.address || '',
+    phone: item.phone || '',
+    defaultNotice: item.default_notice || '',
+    defaultMealPlan: item.default_meal_plan || '',
+    rooms: Array.isArray(item.rooms) ? item.rooms : [],
+  };
+}
+
+export async function listPartners() {
+  const data = await supabaseFetch('partners?select=*&order=name.asc');
+  return data.map(partnerFromRow);
 }
 
 export async function searchPartners(query = '') {
-  if (!hasSupabaseConfig) {
-    return mockPartners.filter((partner) => includesQuery(partner.name, query)).slice(0, 8);
-  }
-
   const params = new URLSearchParams({
     select: '*',
     name: `ilike.*${query}*`,
@@ -17,23 +44,38 @@ export async function searchPartners(query = '') {
     limit: '8',
   });
   const data = await supabaseFetch(`partners?${params.toString()}`);
-  return data.map((item) => ({
-    id: item.id,
-    name: item.name,
-    ciUrl: item.ci_url,
-    recipientName: item.recipient_name || item.name,
-    senderName: item.sender_name || '',
-    bankAccount: item.bank_account || '',
-    invoiceRemark: item.invoice_remark || '',
-    paymentTerms: item.payment_terms || '',
-  }));
+  return data.map(partnerFromRow);
+}
+
+export async function createPartner(partner) {
+  const data = await supabaseFetch('partners?select=*', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: partner.name,
+      ci_url: partner.ciUrl || null,
+    }),
+  });
+  return partnerFromRow(data[0]);
+}
+
+export async function updatePartner(partner) {
+  const data = await supabaseFetch(`partners?id=eq.${partner.id}&select=*`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      name: partner.name,
+      ci_url: partner.ciUrl || null,
+      updated_at: new Date().toISOString(),
+    }),
+  });
+  return partnerFromRow(data[0]);
+}
+
+export async function listHotels() {
+  const data = await supabaseFetch('hotels?select=*&order=country.asc,city.asc,korean_name.asc,name.asc');
+  return data.map(hotelFromRow);
 }
 
 export async function searchHotels(query = '') {
-  if (!hasSupabaseConfig) {
-    return mockHotels.filter((hotel) => includesQuery(hotel.name, query)).slice(0, 8);
-  }
-
   const params = new URLSearchParams({
     select: '*',
     name: `ilike.*${query}*`,
@@ -41,21 +83,49 @@ export async function searchHotels(query = '') {
     limit: '8',
   });
   const data = await supabaseFetch(`hotels?${params.toString()}`);
-  return data.map((item) => ({
-    id: item.id,
-    name: item.name,
-    country: item.country,
-    city: item.city,
-    logoUrl: item.logo_url,
-    address: item.address,
-    phone: item.phone,
-    defaultNotice: item.default_notice,
-    defaultMealPlan: item.default_meal_plan,
-  }));
+  return data.map(hotelFromRow);
+}
+
+export async function createHotel(hotel) {
+  const data = await supabaseFetch('hotels?select=*', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: hotel.name,
+      korean_name: hotel.koreanName || null,
+      country: hotel.country || null,
+      city: hotel.city || null,
+      logo_url: hotel.logoUrl || null,
+      address: hotel.address || null,
+      phone: hotel.phone || null,
+      default_notice: hotel.defaultNotice || null,
+      default_meal_plan: hotel.defaultMealPlan || null,
+      rooms: hotel.rooms || [],
+    }),
+  });
+  return hotelFromRow(data[0]);
+}
+
+export async function updateHotel(hotel) {
+  const data = await supabaseFetch(`hotels?id=eq.${hotel.id}&select=*`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      name: hotel.name,
+      korean_name: hotel.koreanName || null,
+      country: hotel.country || null,
+      city: hotel.city || null,
+      logo_url: hotel.logoUrl || null,
+      address: hotel.address || null,
+      phone: hotel.phone || null,
+      default_notice: hotel.defaultNotice || null,
+      default_meal_plan: hotel.defaultMealPlan || null,
+      rooms: hotel.rooms || [],
+      updated_at: new Date().toISOString(),
+    }),
+  });
+  return hotelFromRow(data[0]);
 }
 
 export async function saveReservation(reservation) {
-  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   const partnerId = uuidPattern.test(reservation.partnerId || '') ? reservation.partnerId : null;
   const hotelId = uuidPattern.test(reservation.hotelId || '') ? reservation.hotelId : null;
 
@@ -89,11 +159,6 @@ export async function saveReservation(reservation) {
     updated_at: new Date().toISOString(),
   };
 
-  if (!hasSupabaseConfig) {
-    localStorage.setItem('partnerHotelDocsReactDraftV1', JSON.stringify(reservation));
-    return { ...reservation, id: reservation.id || `local-${Date.now()}` };
-  }
-
   const data = reservation.id && uuidPattern.test(reservation.id)
     ? await supabaseFetch(`reservations?id=eq.${reservation.id}&select=*`, {
         method: 'PATCH',
@@ -105,4 +170,10 @@ export async function saveReservation(reservation) {
       });
 
   return { ...reservation, id: data?.[0]?.id || reservation.id };
+}
+
+export async function loadLatestReservation() {
+  const data = await supabaseFetch('reservations?select=*&order=updated_at.desc&limit=1');
+  if (!data.length) return null;
+  return { ...data[0].snapshot, id: data[0].id };
 }

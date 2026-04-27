@@ -781,6 +781,12 @@ th {
   font-size: 18px;
 }
 
+.master-state {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .master-close {
   width: 32px;
   height: 32px;
