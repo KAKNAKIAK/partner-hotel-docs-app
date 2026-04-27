@@ -1,8 +1,10 @@
 export const initialReservation = {
   id: '',
   partnerId: '',
+  companyId: '',
   hotelId: '',
   partnerName: '',
+  companyName: '',
   senderName: '',
   issueDate: '',
   leadGuest: '',

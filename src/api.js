@@ -79,6 +79,18 @@ export async function listCompanyInfos() {
   return data.map(companyInfoFromRow);
 }
 
+export async function searchCompanyInfos(query = '') {
+  if (!query.trim()) return listCompanyInfos();
+  const params = new URLSearchParams({
+    select: '*',
+    name: `ilike.*${query}*`,
+    order: 'name.asc',
+    limit: '8',
+  });
+  const data = await supabaseFetch(`company_settings?${params.toString()}`);
+  return data.map(companyInfoFromRow);
+}
+
 export async function createCompanyInfo(companyInfo) {
   const payload = companyInfoToRow(companyInfo);
   const data = await supabaseFetch('company_settings?select=*', {

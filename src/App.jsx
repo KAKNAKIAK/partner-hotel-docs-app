@@ -18,6 +18,7 @@ import {
   listRegions,
   loadLatestReservation,
   saveReservation,
+  searchCompanyInfos,
   searchHotels,
   searchPartners,
   updateCompanyInfo,
@@ -206,6 +207,7 @@ function App() {
       items.push(`체크인/체크아웃 기준 ${autoNights}박인데 문서 표시 박수는 ${reservation.statedNights}박입니다.`);
     }
     if (!reservation.partnerId) items.push('거래처 마스터가 선택되지 않았습니다.');
+    if (!reservation.companyId) items.push('업체 정보가 선택되지 않았습니다.');
     if (!reservation.hotelId) items.push('호텔 마스터가 선택되지 않았습니다.');
     if (!String(reservation.confirmNo || '').trim()) items.push('호텔 확정번호가 비어 있습니다.');
     if (!String(reservation.exchangeRateDate || '').trim()) items.push('환율 기준일이 비어 있습니다.');
@@ -243,10 +245,17 @@ function App() {
     patch({
       partnerId: partner.id,
       partnerName: partner.recipientName || partner.name,
-      senderName: partner.senderName,
       paymentTerms: partner.paymentTerms,
-      bankAccount: partner.bankAccount,
       invoiceRemark: partner.invoiceRemark,
+    });
+  }
+
+  function selectCompany(company) {
+    patch({
+      companyId: company.id,
+      companyName: company.name,
+      senderName: company.name,
+      bankAccount: company.bankAccount,
     });
   }
 
@@ -320,8 +329,8 @@ function App() {
     ['audit', '검수표'],
   ];
   const workflowSteps = [
-    ['source', '1', '거래처·호텔'],
-    ['booking', '2', '예약'],
+    ['source', '1', '거래처/업체'],
+    ['booking', '2', '호텔·예약'],
     ['stay', '3', '투숙'],
     ['charges', '4', '요금'],
     ['settlement', '5', '정산'],
@@ -382,7 +391,7 @@ function App() {
           </div>
           <div className="form-stage">
             {activeStep === 'source' && (
-            <Step number="1" title="거래처·호텔 선택">
+            <Step number="1" title="거래처/업체 선택">
               <div className="grid grid-2">
                 <SearchSelect
                   label="거래처 검색"
@@ -394,6 +403,32 @@ function App() {
                   placeholder="거래처명을 입력하세요"
                 />
                 <SearchSelect
+                  label="업체 검색"
+                  value={reservation.companyName}
+                  loadOptions={searchCompanyInfos}
+                  getLabel={(item) => item.name}
+                  getMeta={(item) => item.bankAccount}
+                  onSelect={selectCompany}
+                  placeholder="업체명을 입력하세요"
+                />
+                <TextInput
+                  label="발신"
+                  value={reservation.senderName}
+                  onChange={(value) => patchField('senderName', value)}
+                />
+                <TextInput
+                  label="입금 계좌"
+                  value={reservation.bankAccount}
+                  onChange={(value) => patchField('bankAccount', value)}
+                />
+              </div>
+            </Step>
+            )}
+
+            {activeStep === 'booking' && (
+            <Step number="2" title="호텔·예약 기본">
+              <div className="grid grid-2">
+                <SearchSelect
                   label="호텔 검색"
                   value={reservation.hotelName}
                   loadOptions={searchHotels}
@@ -402,13 +437,6 @@ function App() {
                   onSelect={selectHotel}
                   placeholder="호텔명을 입력하세요"
                 />
-              </div>
-            </Step>
-            )}
-
-            {activeStep === 'booking' && (
-            <Step number="2" title="예약 기본">
-              <div className="grid grid-2">
                 <TextInput label="예약명" value={reservation.leadGuest} onChange={(value) => patchField('leadGuest', value)} />
                 <TextInput label="확정번호" value={reservation.confirmNo} onChange={(value) => patchField('confirmNo', value)} />
                 <TextInput label="작성일" value={reservation.issueDate} onChange={(value) => patchField('issueDate', value)} />
@@ -518,19 +546,10 @@ function App() {
                   <textarea value={reservation.customerNotice} onChange={(event) => patchField('customerNotice', event.target.value)} />
                 </Field>
                 <details className="default-box span-3">
-                  <summary>발신·계좌·인보이스 문구</summary>
-                  <div className="grid grid-2">
-                    <TextInput label="발신" className="span-2" value={reservation.senderName} onChange={(value) => patchField('senderName', value)} />
-                    <TextInput
-                      label="입금 계좌"
-                      className="span-2"
-                      value={reservation.bankAccount}
-                      onChange={(value) => patchField('bankAccount', value)}
-                    />
-                    <Field label="거래처 인보이스 문구" className="span-2">
-                      <textarea value={reservation.invoiceRemark} onChange={(event) => patchField('invoiceRemark', event.target.value)} />
-                    </Field>
-                  </div>
+                  <summary>거래처 인보이스 문구</summary>
+                  <Field label="거래처 인보이스 문구">
+                    <textarea value={reservation.invoiceRemark} onChange={(event) => patchField('invoiceRemark', event.target.value)} />
+                  </Field>
                 </details>
               </div>
             </Step>
