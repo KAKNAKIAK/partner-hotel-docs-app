@@ -1,4 +1,4 @@
-import { cloneElement, isValidElement, useEffect, useId, useMemo, useState } from 'react';
+import { cloneElement, isValidElement, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { initialReservation } from './data.js';
 import {
   createHotel,
@@ -38,11 +38,48 @@ function makeId() {
 }
 
 function calcNights(checkIn, checkOut) {
-  if (!checkIn || !checkOut) return 0;
-  const start = new Date(`${checkIn}T00:00:00Z`).getTime();
-  const end = new Date(`${checkOut}T00:00:00Z`).getTime();
+  const normalizedCheckIn = normalizeDateInput(checkIn);
+  const normalizedCheckOut = normalizeDateInput(checkOut);
+  if (!normalizedCheckIn || !normalizedCheckOut) return 0;
+  const start = new Date(`${normalizedCheckIn}T00:00:00Z`).getTime();
+  const end = new Date(`${normalizedCheckOut}T00:00:00Z`).getTime();
   if (!Number.isFinite(start) || !Number.isFinite(end)) return 0;
   return Math.max(0, Math.round((end - start) / 86400000));
+}
+
+function normalizeDateInput(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  let normalized = '';
+  if (/^\d{8}$/.test(raw)) {
+    normalized = `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`;
+  } else if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    normalized = raw;
+  } else {
+    return '';
+  }
+
+  const [year, month, day] = normalized.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() + 1 !== month ||
+    date.getUTCDate() !== day
+  ) {
+    return '';
+  }
+
+  return normalized;
+}
+
+function addDays(dateValue, days) {
+  const normalized = normalizeDateInput(dateValue);
+  const count = Number(days || 0);
+  if (!normalized || !Number.isFinite(count) || count < 0) return '';
+  const date = new Date(`${normalized}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + count);
+  return date.toISOString().slice(0, 10);
 }
 
 function todayDate() {
@@ -204,9 +241,10 @@ function App() {
   const [reservation, setReservation] = useState(() => createInitialReservation());
   const [activeTab, setActiveTab] = useState('invoice');
   const [activeStep, setActiveStep] = useState('source');
-  const [manualNights, setManualNights] = useState(false);
   const [saveState, setSaveState] = useState('');
   const [masterOpen, setMasterOpen] = useState(false);
+  const [checkInError, setCheckInError] = useState('');
+  const nightsInputRef = useRef(null);
 
   useEffect(() => {
     if (!masterOpen) return undefined;
@@ -227,7 +265,7 @@ function App() {
   const warnings = useMemo(() => {
     const items = [];
     if (autoNights !== Number(reservation.statedNights || 0)) {
-      items.push(`체크인/체크아웃 기준 ${autoNights}박인데 문서 표시 박수는 ${reservation.statedNights}박입니다.`);
+      items.push(`체크인/체크아웃 기준 ${autoNights}박인데 입력 박수는 ${reservation.statedNights}박입니다.`);
     }
     if (!reservation.partnerId) items.push('거래처 마스터가 선택되지 않았습니다.');
     if (!reservation.companyId) items.push('업체 정보가 선택되지 않았습니다.');
@@ -255,13 +293,58 @@ function App() {
 
   function patchField(key, value) {
     setReservation((current) => {
-      const next = { ...current, [key]: value };
-      if ((key === 'checkIn' || key === 'checkOut') && !manualNights) {
-        const nextNights = calcNights(next.checkIn, next.checkOut);
-        if (nextNights) next.statedNights = nextNights;
-      }
-      return next;
+      return { ...current, [key]: value };
     });
+  }
+
+  function handleCheckInChange(value) {
+    const normalized = normalizeDateInput(value);
+    setReservation((current) => {
+      const nights = Number(current.statedNights || 0);
+      const checkIn = normalized || value;
+      return {
+        ...current,
+        checkIn,
+        checkOut: normalized && nights > 0 ? addDays(normalized, nights) : current.checkOut,
+      };
+    });
+
+    if (normalized) {
+      setCheckInError('');
+      requestAnimationFrame(() => {
+        nightsInputRef.current?.focus();
+        nightsInputRef.current?.select?.();
+      });
+    }
+  }
+
+  function handleCheckInBlur() {
+    const normalized = normalizeDateInput(reservation.checkIn);
+    if (!normalized) {
+      setCheckInError(
+        String(reservation.checkIn || '').trim() ? '체크인 날짜는 YYYY-MM-DD 또는 YYYYMMDD로 입력해 주세요.' : ''
+      );
+      return;
+    }
+
+    const nights = Number(reservation.statedNights || 0);
+    setCheckInError('');
+    setReservation((current) => {
+      return {
+        ...current,
+        checkIn: normalized,
+        checkOut: nights > 0 ? addDays(normalized, nights) : current.checkOut,
+      };
+    });
+  }
+
+  function handleNightsChange(value) {
+    const nights = Number(value || 0);
+    setReservation((current) => ({
+      ...current,
+      statedNights: nights,
+      checkOut: normalizeDateInput(current.checkIn) && nights > 0 ? addDays(current.checkIn, nights) : current.checkOut,
+    }));
   }
 
   function selectPartner(partner) {
@@ -474,33 +557,28 @@ function App() {
                   placeholder="호텔명을 입력하세요"
                 />
                 <TextInput label="확정번호" value={reservation.confirmNo} onChange={(value) => patchField('confirmNo', value)} />
-                <TextInput label="체크인" value={reservation.checkIn} onChange={(value) => patchField('checkIn', value)} />
-                <TextInput label="체크아웃" value={reservation.checkOut} onChange={(value) => patchField('checkOut', value)} />
-                <Field label="자동 계산 박수">
-                  <div className="calc-card">
-                    <span>체크인·체크아웃 기준</span>
-                    <strong>{autoNights}박</strong>
-                  </div>
-                </Field>
-                <Field label="문서 표시 박수">
+                <Field label="체크인">
                   <input
-                    type="number"
-                    value={reservation.statedNights}
-                    onChange={(event) => {
-                      setManualNights(true);
-                      patchField('statedNights', Number(event.target.value || 0));
-                    }}
+                    value={reservation.checkIn || ''}
+                    inputMode="numeric"
+                    placeholder="YYYY-MM-DD 또는 YYYYMMDD"
+                    aria-invalid={checkInError ? 'true' : 'false'}
+                    onBlur={handleCheckInBlur}
+                    onChange={(event) => handleCheckInChange(event.target.value)}
                   />
-                  <button
-                    className="btn btn-small"
-                    type="button"
-                    onClick={() => {
-                      setManualNights(false);
-                      patchField('statedNights', autoNights);
-                    }}
-                  >
-                    자동 박수 반영
-                  </button>
+                  {checkInError && <p className="field-error">{checkInError}</p>}
+                </Field>
+                <Field label="박수">
+                  <input
+                    ref={nightsInputRef}
+                    type="number"
+                    min="0"
+                    value={reservation.statedNights}
+                    onChange={(event) => handleNightsChange(event.target.value)}
+                  />
+                </Field>
+                <Field label="체크아웃">
+                  <input className="readonly-input" value={reservation.checkOut || ''} placeholder="박수 입력 시 자동 계산" readOnly />
                 </Field>
                 <TextInput label="객실 타입" value={reservation.roomType} onChange={(value) => patchField('roomType', value)} />
                 <NumberInput label="객실 수" value={reservation.roomCount} onChange={(value) => patchField('roomCount', value)} />
@@ -1901,7 +1979,7 @@ function Audit({ reservation, foreignTotal, krwTotal, warnings }) {
       <ul className="audit-list">
         <li><strong>거래처 마스터</strong><span>{reservation.partnerId || '-'}</span></li>
         <li><strong>호텔 마스터</strong><span>{reservation.hotelId || '-'}</span></li>
-        <li><strong>문서 표시 박수</strong><span>{reservation.statedNights}박</span></li>
+        <li><strong>박수</strong><span>{reservation.statedNights}박</span></li>
         <li><strong>투숙 인원</strong><span>성인 {reservation.adultCount} / 아동 {reservation.childCount} / 유아 {reservation.infantCount}</span></li>
         <li><strong>외화 합계</strong><span>{money(foreignTotal, reservation.currency)}</span></li>
         <li><strong>원화 청구액</strong><span>{krw(krwTotal)}</span></li>

@@ -404,29 +404,17 @@ select:focus {
   font-weight: 800;
 }
 
-.calc-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  min-height: 38px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  padding: 8px 10px;
-  background: var(--blue-soft);
+.readonly-input {
+  background: var(--surface-soft);
+  color: var(--navy);
+  font-weight: 900;
 }
 
-.calc-card span {
-  color: var(--muted);
+.field-error {
+  margin: 0;
+  color: var(--red);
   font-size: 11px;
-  font-weight: 900;
-}
-
-.calc-card strong {
-  color: var(--blue);
-  font-size: 16px;
-  font-weight: 900;
-  white-space: nowrap;
+  font-weight: 800;
 }
 
 .template-row {
