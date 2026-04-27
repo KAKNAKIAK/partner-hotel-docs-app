@@ -18,6 +18,7 @@ export const initialReservation = {
   hotelName: '',
   hotelAddress: '',
   hotelPhone: '',
+  hotelRooms: [],
   roomType: '',
   checkIn: '',
   checkOut: '',

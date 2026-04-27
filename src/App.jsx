@@ -256,6 +256,11 @@ function App() {
   }, [masterOpen]);
 
   const autoNights = calcNights(reservation.checkIn, reservation.checkOut);
+  const roomOptions = useMemo(() => {
+    const rooms = Array.isArray(reservation.hotelRooms) ? reservation.hotelRooms.filter(Boolean) : [];
+    if (reservation.roomType && !rooms.includes(reservation.roomType)) return [reservation.roomType, ...rooms];
+    return rooms;
+  }, [reservation.hotelRooms, reservation.roomType]);
   const foreignTotal = useMemo(
     () => reservation.charges.reduce((sum, line) => sum + lineTotal(line), 0),
     [reservation.charges]
@@ -376,6 +381,8 @@ function App() {
       hotelName: hotel.name,
       hotelAddress: hotel.address,
       hotelPhone: hotel.phone,
+      hotelRooms: hotel.rooms || [],
+      roomType: hotel.rooms?.[0] || '',
       mealPlan: hotel.defaultMealPlan,
       customerNotice: hotel.defaultNotice,
     });
@@ -580,7 +587,18 @@ function App() {
                 <Field label="체크아웃">
                   <input className="readonly-input" value={reservation.checkOut || ''} placeholder="박수 입력 시 자동 계산" readOnly />
                 </Field>
-                <TextInput label="객실 타입" value={reservation.roomType} onChange={(value) => patchField('roomType', value)} />
+                <Field label="객실 타입">
+                  <select
+                    value={reservation.roomType || ''}
+                    onChange={(event) => patchField('roomType', event.target.value)}
+                    disabled={!roomOptions.length}
+                  >
+                    <option value="">{roomOptions.length ? '객실 타입 선택' : '호텔 마스터 객실 없음'}</option>
+                    {roomOptions.map((room) => (
+                      <option value={room} key={room}>{room}</option>
+                    ))}
+                  </select>
+                </Field>
                 <NumberInput label="객실 수" value={reservation.roomCount} onChange={(value) => patchField('roomCount', value)} />
                 <TextInput label="레이트 체크아웃" value={reservation.lateCheckout} onChange={(value) => patchField('lateCheckout', value)} />
               </div>
