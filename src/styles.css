@@ -953,7 +953,17 @@ th {
 }
 
 .hotel-add {
-  grid-template-columns: 1fr 1fr 38px !important;
+  grid-template-columns: 1fr 38px !important;
+}
+
+.hotel-add input {
+  grid-column: 1;
+}
+
+.hotel-add .master-add {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: stretch;
 }
 
 .master-detail {
