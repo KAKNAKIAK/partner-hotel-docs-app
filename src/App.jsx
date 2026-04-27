@@ -122,6 +122,7 @@ function Step({ number, title, children }) {
 function App() {
   const [reservation, setReservation] = useState(initialReservation);
   const [activeTab, setActiveTab] = useState('invoice');
+  const [activeStep, setActiveStep] = useState('source');
   const [manualNights, setManualNights] = useState(false);
   const [saveState, setSaveState] = useState('');
 
@@ -250,6 +251,13 @@ function App() {
     ['confirmation', '호텔 확정서'],
     ['audit', '검수표'],
   ];
+  const workflowSteps = [
+    ['source', '1', '거래처·호텔'],
+    ['booking', '2', '예약'],
+    ['stay', '3', '투숙'],
+    ['charges', '4', '요금'],
+    ['settlement', '5', '정산'],
+  ];
 
   return (
     <>
@@ -286,7 +294,23 @@ function App() {
             <h2>예약 원본 입력</h2>
             <span className="status-chip">{reservation.status}</span>
           </div>
-          <div className="form-scroll">
+          <div className="step-nav" role="tablist" aria-label="입력 단계 선택">
+            {workflowSteps.map(([id, number, label]) => (
+              <button
+                key={id}
+                className={`step-tab ${activeStep === id ? 'active' : ''}`}
+                type="button"
+                role="tab"
+                aria-selected={activeStep === id}
+                onClick={() => setActiveStep(id)}
+              >
+                <span>{number}</span>
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="form-stage">
+            {activeStep === 'source' && (
             <Step number="1" title="거래처·호텔 선택">
               <div className="grid grid-2">
                 <SearchSelect
@@ -309,7 +333,9 @@ function App() {
                 />
               </div>
             </Step>
+            )}
 
+            {activeStep === 'booking' && (
             <Step number="2" title="예약 기본">
               <div className="grid grid-2">
                 <TextInput label="예약명" value={reservation.leadGuest} onChange={(value) => patchField('leadGuest', value)} />
@@ -326,7 +352,9 @@ function App() {
                 </Field>
               </div>
             </Step>
+            )}
 
+            {activeStep === 'stay' && (
             <Step number="3" title="투숙 조건">
               <div className="grid grid-2">
                 <TextInput label="체크인" value={reservation.checkIn} onChange={(value) => patchField('checkIn', value)} />
@@ -365,7 +393,9 @@ function App() {
                 <TextInput label="레이트 체크아웃" value={reservation.lateCheckout} onChange={(value) => patchField('lateCheckout', value)} />
               </div>
             </Step>
+            )}
 
+            {activeStep === 'charges' && (
             <Step number="4" title="요금 구성">
               <div className="template-row">
                 <button className="btn btn-small" type="button" onClick={() => addCharge('room')}>객실</button>
@@ -387,7 +417,9 @@ function App() {
                 ))}
               </div>
             </Step>
+            )}
 
+            {activeStep === 'settlement' && (
             <Step number="5" title="정산·안내">
               <div className="grid grid-3">
                 <TextInput label="통화" value={reservation.currency} onChange={(value) => patchField('currency', value)} />
@@ -431,6 +463,30 @@ function App() {
                 </details>
               </div>
             </Step>
+            )}
+          </div>
+          <div className="form-foot">
+            <button
+              className="btn btn-small"
+              type="button"
+              onClick={() => {
+                const index = workflowSteps.findIndex(([id]) => id === activeStep);
+                setActiveStep(workflowSteps[Math.max(0, index - 1)][0]);
+              }}
+            >
+              이전
+            </button>
+            <span>{workflowSteps.find(([id]) => id === activeStep)?.[2]}</span>
+            <button
+              className="btn btn-small btn-primary"
+              type="button"
+              onClick={() => {
+                const index = workflowSteps.findIndex(([id]) => id === activeStep);
+                setActiveStep(workflowSteps[Math.min(workflowSteps.length - 1, index + 1)][0]);
+              }}
+            >
+              다음
+            </button>
           </div>
         </section>
 
