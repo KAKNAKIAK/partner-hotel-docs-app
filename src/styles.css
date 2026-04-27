@@ -865,15 +865,6 @@ th {
   overflow: hidden;
 }
 
-.master-company-panel {
-  display: flex;
-  justify-content: center;
-  flex: 1;
-  min-height: 0;
-  padding: 14px;
-  overflow: auto;
-}
-
 .master-card {
   display: flex;
   flex-direction: column;
@@ -1056,8 +1047,12 @@ th {
   padding: 10px;
 }
 
+.master-company-grid {
+  align-content: stretch;
+}
+
 .company-info-card {
-  width: min(720px, 100%);
+  width: 100%;
 }
 
 .company-info-body {
@@ -1252,10 +1247,6 @@ th {
   .master-agency-grid {
     grid-template-columns: 1fr;
     overflow: auto;
-  }
-
-  .master-company-panel {
-    justify-content: stretch;
   }
 
   .master-window {

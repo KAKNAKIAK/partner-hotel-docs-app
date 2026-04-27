@@ -1227,9 +1227,21 @@ function MasterDataManager({ onClose }) {
         )}
 
         {activeTab === 'company' && (
-          <section className="master-company-panel">
+          <section className="master-agency-grid master-company-grid">
+            <div className="master-card company-list-card">
+              <header>업체 정보 목록</header>
+              <div className="agency-list">
+                <button className="agency-row active" type="button">
+                  <span>
+                    {companyInfo.ciUrl ? <img src={companyInfo.ciUrl} alt="" /> : 'CI'}
+                  </span>
+                  <strong>업체 정보</strong>
+                </button>
+              </div>
+            </div>
+
             <div className="master-card company-info-card">
-              <header>업체 정보</header>
+              <header>업체 상세 정보</header>
               <div className="company-info-body">
                 <div className="company-image-grid">
                   <Field label="CI">
