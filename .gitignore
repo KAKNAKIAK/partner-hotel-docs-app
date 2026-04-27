@@ -2,5 +2,7 @@ node_modules/
 node_modules.failed-*/
 dist/
 .env
+.tools/
+supabase/.temp/
 .DS_Store
 npm-debug.log*
