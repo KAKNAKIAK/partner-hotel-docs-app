@@ -890,8 +890,7 @@ th {
 .master-list,
 .hotel-list,
 .agency-list,
-.room-list,
-.template-list {
+.room-list {
   flex: 1;
   min-height: 0;
   overflow: auto;
@@ -997,8 +996,7 @@ th {
   flex: 1;
 }
 
-.room-list div,
-.template-item {
+.room-list div {
   border-bottom: 1px solid var(--line);
   padding: 10px 12px;
   color: var(--navy);
@@ -1006,8 +1004,7 @@ th {
   font-weight: 800;
 }
 
-.agency-card,
-.charge-template-card {
+.agency-card {
   width: min(520px, 100%);
 }
 
@@ -1036,18 +1033,6 @@ th {
 .agency-row strong {
   color: var(--navy);
   font-size: 13px;
-}
-
-.template-item {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr;
-  gap: 10px;
-  align-items: center;
-}
-
-.template-item span {
-  color: var(--muted);
-  font-size: 12px;
 }
 
 @media (max-width: 1380px) {
@@ -1142,8 +1127,7 @@ th {
     flex: 0 0 112px;
   }
 
-  .hotel-add,
-  .template-item {
+  .hotel-add {
     grid-template-columns: 1fr !important;
   }
 

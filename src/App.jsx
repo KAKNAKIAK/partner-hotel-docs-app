@@ -596,11 +596,6 @@ function MasterDataManager({ onClose }) {
   const [activeTab, setActiveTab] = useState('hotels');
   const [partners, setPartners] = useState(seedPartners);
   const [hotels, setHotels] = useState(seedHotels);
-  const [chargeTemplates, setChargeTemplates] = useState([
-    { id: 'tpl-room', name: '객실 요금', unitPrice: 0, quantityRule: '객실 수', nightsRule: '숙박 박수' },
-    { id: 'tpl-late', name: '레이트 체크아웃', unitPrice: 0, quantityRule: '객실 수', nightsRule: '1박' },
-    { id: 'tpl-breakfast', name: '조식 추가 비용', unitPrice: 0, quantityRule: '성인 수', nightsRule: '1박' },
-  ]);
   const [selectedCountry, setSelectedCountry] = useState(seedHotels[0]?.country || 'Vietnam');
   const [selectedCity, setSelectedCity] = useState(seedHotels[0]?.city || 'Nha Trang');
   const [selectedHotelId, setSelectedHotelId] = useState(seedHotels[0]?.id || '');
@@ -610,7 +605,6 @@ function MasterDataManager({ onClose }) {
   const [newHotelKorean, setNewHotelKorean] = useState('');
   const [newRoom, setNewRoom] = useState('');
   const [newPartner, setNewPartner] = useState('');
-  const [newTemplate, setNewTemplate] = useState('');
 
   const countries = Array.from(new Set(hotels.map((hotel) => hotel.country).filter(Boolean)));
   const cities = Array.from(
@@ -690,20 +684,9 @@ function MasterDataManager({ onClose }) {
     setNewPartner('');
   }
 
-  function addTemplate() {
-    const trimmed = newTemplate.trim();
-    if (!trimmed) return;
-    setChargeTemplates((current) => [
-      ...current,
-      { id: makeId(), name: trimmed, unitPrice: 0, quantityRule: '직접 입력', nightsRule: '직접 입력' },
-    ]);
-    setNewTemplate('');
-  }
-
   const tabs = [
     ['hotels', '호텔 정보'],
     ['partners', '여행사'],
-    ['charges', '요금표'],
   ];
 
   return (
@@ -834,27 +817,6 @@ function MasterDataManager({ onClose }) {
                   <button className="master-add" type="button" onClick={addRoom}>+</button>
                 </footer>
               </div>
-            </div>
-          </section>
-        )}
-
-        {activeTab === 'charges' && (
-          <section className="master-simple">
-            <div className="master-card charge-template-card">
-              <header>요금표</header>
-              <div className="template-list">
-                {chargeTemplates.map((template) => (
-                  <div className="template-item" key={template.id}>
-                    <strong>{template.name}</strong>
-                    <span>수량: {template.quantityRule}</span>
-                    <span>박수: {template.nightsRule}</span>
-                  </div>
-                ))}
-              </div>
-              <footer>
-                <input value={newTemplate} onChange={(event) => setNewTemplate(event.target.value)} placeholder="요금 항목명" />
-                <button className="master-add" type="button" onClick={addTemplate}>+</button>
-              </footer>
             </div>
           </section>
         )}
