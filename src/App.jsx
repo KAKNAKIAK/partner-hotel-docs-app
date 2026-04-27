@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { initialReservation } from './data.js';
+import { cloneElement, isValidElement, useEffect, useId, useMemo, useState } from 'react';
+import { hotels as seedHotels, initialReservation, partners as seedPartners } from './data.js';
 import { saveReservation, searchHotels, searchPartners } from './api.js';
 import { hasSupabaseConfig } from './supabaseClient.js';
 
@@ -99,10 +99,31 @@ function SearchSelect({ label, value, loadOptions, getLabel, getMeta, onSelect, 
 }
 
 function Field({ label, children, className = '' }) {
+  const fallbackId = useId();
+  const child = isValidElement(children) ? children : null;
+  const controlId = child?.props.id || `field-${fallbackId}`;
+  const control = child
+    ? cloneElement(child, {
+        id: controlId,
+        onFocus: (event) => {
+          child.props.onFocus?.(event);
+          if (child.props.type === 'number' && typeof event.target.select === 'function') {
+            event.target.select();
+          }
+        },
+        onMouseUp: (event) => {
+          child.props.onMouseUp?.(event);
+          if (child.props.type === 'number') {
+            event.preventDefault();
+          }
+        },
+      })
+    : children;
+
   return (
     <div className={`field ${className}`}>
-      <label>{label}</label>
-      {children}
+      <label htmlFor={child ? controlId : undefined}>{label}</label>
+      {control}
     </div>
   );
 }
@@ -125,6 +146,16 @@ function App() {
   const [activeStep, setActiveStep] = useState('source');
   const [manualNights, setManualNights] = useState(false);
   const [saveState, setSaveState] = useState('');
+  const [masterOpen, setMasterOpen] = useState(false);
+
+  useEffect(() => {
+    if (!masterOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [masterOpen]);
 
   const autoNights = calcNights(reservation.checkIn, reservation.checkOut);
   const foreignTotal = useMemo(
@@ -281,6 +312,9 @@ function App() {
           </button>
           <button className="btn" type="button" onClick={loadDraft}>
             불러오기
+          </button>
+          <button className="btn" type="button" onClick={() => setMasterOpen(true)}>
+            마스터 관리
           </button>
           <button className="btn btn-primary" type="button" onClick={() => window.print()}>
             인쇄 / PDF
@@ -553,7 +587,298 @@ function App() {
           </section>
         </aside>
       </main>
+      {masterOpen && <MasterDataManager onClose={() => setMasterOpen(false)} />}
     </>
+  );
+}
+
+function MasterDataManager({ onClose }) {
+  const [activeTab, setActiveTab] = useState('hotels');
+  const [partners, setPartners] = useState(seedPartners);
+  const [hotels, setHotels] = useState(seedHotels);
+  const [chargeTemplates, setChargeTemplates] = useState([
+    { id: 'tpl-room', name: '객실 요금', unitPrice: 0, quantityRule: '객실 수', nightsRule: '숙박 박수' },
+    { id: 'tpl-late', name: '레이트 체크아웃', unitPrice: 0, quantityRule: '객실 수', nightsRule: '1박' },
+    { id: 'tpl-breakfast', name: '조식 추가 비용', unitPrice: 0, quantityRule: '성인 수', nightsRule: '1박' },
+  ]);
+  const [selectedCountry, setSelectedCountry] = useState(seedHotels[0]?.country || 'Vietnam');
+  const [selectedCity, setSelectedCity] = useState(seedHotels[0]?.city || 'Nha Trang');
+  const [selectedHotelId, setSelectedHotelId] = useState(seedHotels[0]?.id || '');
+  const [newCountry, setNewCountry] = useState('');
+  const [newCity, setNewCity] = useState('');
+  const [newHotelEnglish, setNewHotelEnglish] = useState('');
+  const [newHotelKorean, setNewHotelKorean] = useState('');
+  const [newRoom, setNewRoom] = useState('');
+  const [newPartner, setNewPartner] = useState('');
+  const [newTemplate, setNewTemplate] = useState('');
+
+  const countries = Array.from(new Set(hotels.map((hotel) => hotel.country).filter(Boolean)));
+  const cities = Array.from(
+    new Set(hotels.filter((hotel) => hotel.country === selectedCountry).map((hotel) => hotel.city).filter(Boolean))
+  );
+  const visibleHotels = hotels.filter((hotel) => hotel.country === selectedCountry && hotel.city === selectedCity);
+  const selectedHotel = hotels.find((hotel) => hotel.id === selectedHotelId) || visibleHotels[0] || hotels[0];
+  const rooms = selectedHotel?.rooms || [
+    'Deluxe King / Twin Garden view',
+    'Deluxe King Pool View',
+    'Executive Deluxe Garden View',
+    'Executive Deluxe Sea View',
+  ];
+
+  function addCountry() {
+    const trimmed = newCountry.trim();
+    if (!trimmed) return;
+    setSelectedCountry(trimmed);
+    setNewCountry('');
+  }
+
+  function addCity() {
+    const trimmed = newCity.trim();
+    if (!trimmed) return;
+    setSelectedCity(trimmed);
+    setNewCity('');
+  }
+
+  function addHotel() {
+    const name = newHotelEnglish.trim();
+    if (!name) return;
+    const hotel = {
+      id: makeId(),
+      name,
+      koreanName: newHotelKorean.trim(),
+      country: selectedCountry,
+      city: selectedCity,
+      address: '',
+      phone: '',
+      defaultNotice: '',
+      defaultMealPlan: '',
+      rooms: [],
+    };
+    setHotels((current) => [...current, hotel]);
+    setSelectedHotelId(hotel.id);
+    setNewHotelEnglish('');
+    setNewHotelKorean('');
+  }
+
+  function updateSelectedHotel(changes) {
+    if (!selectedHotel) return;
+    setHotels((current) => current.map((hotel) => (hotel.id === selectedHotel.id ? { ...hotel, ...changes } : hotel)));
+  }
+
+  function addRoom() {
+    const trimmed = newRoom.trim();
+    if (!trimmed || !selectedHotel) return;
+    updateSelectedHotel({ rooms: [...rooms, trimmed] });
+    setNewRoom('');
+  }
+
+  function addPartner() {
+    const trimmed = newPartner.trim();
+    if (!trimmed) return;
+    setPartners((current) => [
+      ...current,
+      {
+        id: makeId(),
+        name: trimmed,
+        recipientName: trimmed,
+        senderName: '',
+        bankAccount: '',
+        invoiceRemark: '',
+        paymentTerms: '',
+      },
+    ]);
+    setNewPartner('');
+  }
+
+  function addTemplate() {
+    const trimmed = newTemplate.trim();
+    if (!trimmed) return;
+    setChargeTemplates((current) => [
+      ...current,
+      { id: makeId(), name: trimmed, unitPrice: 0, quantityRule: '직접 입력', nightsRule: '직접 입력' },
+    ]);
+    setNewTemplate('');
+  }
+
+  const tabs = [
+    ['hotels', '호텔 정보'],
+    ['partners', '여행사'],
+    ['charges', '요금표'],
+  ];
+
+  return (
+    <div className="master-overlay" role="dialog" aria-modal="true" aria-label="마스터 데이터 관리">
+      <div className="master-window">
+        <header className="master-header">
+          <div>
+            <span className="master-icon">▣</span>
+            <h2>마스터 데이터 관리</h2>
+          </div>
+          <button className="master-close" type="button" onClick={onClose} aria-label="마스터 데이터 관리 닫기">
+            ×
+          </button>
+        </header>
+
+        <nav className="master-tabs" aria-label="마스터 데이터 종류">
+          {tabs.map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              className={activeTab === id ? 'active' : ''}
+              onClick={() => setActiveTab(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+
+        {activeTab === 'partners' && (
+          <section className="master-simple">
+            <div className="master-card agency-card">
+              <header>여행사 목록</header>
+              <div className="agency-list">
+                {partners.map((partner) => (
+                  <button className="agency-row" key={partner.id} type="button">
+                    <span>{partner.name.slice(0, 4).toUpperCase()}</span>
+                    <strong>{partner.name}</strong>
+                  </button>
+                ))}
+              </div>
+              <footer>
+                <input value={newPartner} onChange={(event) => setNewPartner(event.target.value)} placeholder="여행사명" />
+                <button className="master-add" type="button" onClick={addPartner}>+</button>
+              </footer>
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'hotels' && (
+          <section className="master-hotel-grid">
+            <MasterColumn
+              title="국가"
+              items={countries}
+              active={selectedCountry}
+              onSelect={(value) => {
+                setSelectedCountry(value);
+                const nextCity = hotels.find((hotel) => hotel.country === value)?.city || '';
+                setSelectedCity(nextCity);
+                setSelectedHotelId(hotels.find((hotel) => hotel.country === value && hotel.city === nextCity)?.id || '');
+              }}
+              inputValue={newCountry}
+              inputPlaceholder="국가 추가"
+              onInput={setNewCountry}
+              onAdd={addCountry}
+            />
+            <MasterColumn
+              title="지역"
+              items={cities}
+              active={selectedCity}
+              onSelect={(value) => {
+                setSelectedCity(value);
+                setSelectedHotelId(hotels.find((hotel) => hotel.country === selectedCountry && hotel.city === value)?.id || '');
+              }}
+              inputValue={newCity}
+              inputPlaceholder="지역 추가"
+              onInput={setNewCity}
+              onAdd={addCity}
+            />
+            <div className="master-card hotel-list-card">
+              <header>호텔</header>
+              <div className="hotel-list">
+                {visibleHotels.map((hotel) => (
+                  <button
+                    key={hotel.id}
+                    type="button"
+                    className={selectedHotel?.id === hotel.id ? 'active' : ''}
+                    onClick={() => setSelectedHotelId(hotel.id)}
+                  >
+                    <strong>{hotel.name}</strong>
+                    <span>{hotel.koreanName || hotel.name}</span>
+                  </button>
+                ))}
+              </div>
+              <footer className="hotel-add">
+                <input value={newHotelEnglish} onChange={(event) => setNewHotelEnglish(event.target.value)} placeholder="영문명" />
+                <input value={newHotelKorean} onChange={(event) => setNewHotelKorean(event.target.value)} placeholder="한글명" />
+                <button className="master-add" type="button" onClick={addHotel}>+</button>
+              </footer>
+            </div>
+
+            <div className="master-detail">
+              <div className="master-card hotel-detail-card">
+                <header>호텔 상세 정보</header>
+                <div className="hotel-detail-body">
+                  <div className="logo-box">{selectedHotel?.name?.slice(0, 2) || 'HT'}</div>
+                  <Field label="호텔 주소">
+                    <textarea
+                      value={selectedHotel?.address || ''}
+                      onChange={(event) => updateSelectedHotel({ address: event.target.value })}
+                    />
+                  </Field>
+                  <Field label="전화번호">
+                    <input
+                      value={selectedHotel?.phone || ''}
+                      onChange={(event) => updateSelectedHotel({ phone: event.target.value })}
+                    />
+                  </Field>
+                  <button className="btn btn-primary btn-small" type="button">저장</button>
+                </div>
+              </div>
+              <div className="master-card room-card">
+                <header>객실</header>
+                <div className="room-list">
+                  {rooms.map((room) => <div key={room}>{room}</div>)}
+                </div>
+                <footer>
+                  <input value={newRoom} onChange={(event) => setNewRoom(event.target.value)} placeholder="객실명" />
+                  <button className="master-add" type="button" onClick={addRoom}>+</button>
+                </footer>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'charges' && (
+          <section className="master-simple">
+            <div className="master-card charge-template-card">
+              <header>요금표</header>
+              <div className="template-list">
+                {chargeTemplates.map((template) => (
+                  <div className="template-item" key={template.id}>
+                    <strong>{template.name}</strong>
+                    <span>수량: {template.quantityRule}</span>
+                    <span>박수: {template.nightsRule}</span>
+                  </div>
+                ))}
+              </div>
+              <footer>
+                <input value={newTemplate} onChange={(event) => setNewTemplate(event.target.value)} placeholder="요금 항목명" />
+                <button className="master-add" type="button" onClick={addTemplate}>+</button>
+              </footer>
+            </div>
+          </section>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MasterColumn({ title, items, active, onSelect, inputValue, inputPlaceholder, onInput, onAdd }) {
+  return (
+    <div className="master-card master-column">
+      <header>{title}</header>
+      <div className="master-list">
+        {items.map((item) => (
+          <button key={item} type="button" className={active === item ? 'active' : ''} onClick={() => onSelect(item)}>
+            {item}
+          </button>
+        ))}
+      </div>
+      <footer>
+        <input value={inputValue} onChange={(event) => onInput(event.target.value)} placeholder={inputPlaceholder} />
+        <button className="master-add" type="button" onClick={onAdd}>+</button>
+      </footer>
+    </div>
   );
 }
 
