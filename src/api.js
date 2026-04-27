@@ -70,6 +70,14 @@ export async function updatePartner(partner) {
   return partnerFromRow(data[0]);
 }
 
+export async function deletePartner(id) {
+  await supabaseFetch(`partners?id=eq.${id}`, {
+    method: 'DELETE',
+    headers: { Prefer: 'return=minimal' },
+  });
+  return id;
+}
+
 export async function listHotels() {
   const data = await supabaseFetch('hotels?select=*&order=country.asc,city.asc,korean_name.asc,name.asc');
   return data.map(hotelFromRow);
@@ -123,6 +131,14 @@ export async function updateHotel(hotel) {
     }),
   });
   return hotelFromRow(data[0]);
+}
+
+export async function deleteHotel(id) {
+  await supabaseFetch(`hotels?id=eq.${id}`, {
+    method: 'DELETE',
+    headers: { Prefer: 'return=minimal' },
+  });
+  return id;
 }
 
 export async function saveReservation(reservation) {

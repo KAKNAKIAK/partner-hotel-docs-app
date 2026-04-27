@@ -3,6 +3,8 @@ import { initialReservation } from './data.js';
 import {
   createHotel,
   createPartner,
+  deleteHotel,
+  deletePartner,
   listHotels,
   listPartners,
   loadLatestReservation,
@@ -315,7 +317,7 @@ function App() {
         </div>
         <div className="toolbar">
           <button className="btn" type="button" onClick={() => setReservation(initialReservation)}>
-            샘플 복원
+            초기화
           </button>
           <button className="btn" type="button" onClick={saveDraft}>
             임시 저장
@@ -629,12 +631,7 @@ function MasterDataManager({ onClose }) {
   const visibleHotels = hotels.filter((hotel) => hotel.country === selectedCountry && hotel.city === selectedCity);
   const selectedHotel = hotels.find((hotel) => hotel.id === selectedHotelId) || visibleHotels[0] || hotels[0];
   const selectedPartner = partners.find((partner) => partner.id === selectedPartnerId) || partners[0];
-  const rooms = selectedHotel?.rooms || [
-    'Deluxe King / Twin Garden view',
-    'Deluxe King Pool View',
-    'Executive Deluxe Garden View',
-    'Executive Deluxe Sea View',
-  ];
+  const rooms = selectedHotel?.rooms || [];
 
   useEffect(() => {
     let ignore = false;
@@ -715,6 +712,11 @@ function MasterDataManager({ onClose }) {
     setNewRoom('');
   }
 
+  function removeRoom(index) {
+    if (!selectedHotel) return;
+    updateSelectedHotel({ rooms: rooms.filter((_, roomIndex) => roomIndex !== index) });
+  }
+
   function addPartner() {
     const trimmed = newPartner.trim();
     if (!trimmed) return;
@@ -763,6 +765,26 @@ function MasterDataManager({ onClose }) {
       });
   }
 
+  function deleteSelectedPartner() {
+    if (!selectedPartner) return;
+    const confirmed = window.confirm(`${selectedPartner.name} 여행사를 삭제할까요?`);
+    if (!confirmed) return;
+    setMasterState('여행사 삭제 중');
+    deletePartner(selectedPartner.id)
+      .then(() => {
+        setPartners((current) => {
+          const next = current.filter((partner) => partner.id !== selectedPartner.id);
+          setSelectedPartnerId(next[0]?.id || '');
+          return next;
+        });
+        setMasterState('여행사 삭제 완료');
+      })
+      .catch((error) => {
+        console.error(error);
+        setMasterState('여행사 삭제 실패');
+      });
+  }
+
   function loadPartnerCi(file) {
     if (!file || !file.type.startsWith('image/') || !selectedPartner) return;
     const reader = new FileReader();
@@ -804,6 +826,29 @@ function MasterDataManager({ onClose }) {
       .catch((error) => {
         console.error(error);
         setMasterState('호텔 수정 실패');
+      });
+  }
+
+  function deleteSelectedHotel() {
+    if (!selectedHotel) return;
+    const confirmed = window.confirm(`${selectedHotel.koreanName || selectedHotel.name} 호텔을 삭제할까요?`);
+    if (!confirmed) return;
+    setMasterState('호텔 삭제 중');
+    deleteHotel(selectedHotel.id)
+      .then(() => {
+        setHotels((current) => {
+          const next = current.filter((hotel) => hotel.id !== selectedHotel.id);
+          const nextHotel = next.find((hotel) => hotel.country === selectedCountry && hotel.city === selectedCity) || next[0];
+          setSelectedCountry(nextHotel?.country || '');
+          setSelectedCity(nextHotel?.city || '');
+          setSelectedHotelId(nextHotel?.id || '');
+          return next;
+        });
+        setMasterState('호텔 삭제 완료');
+      })
+      .catch((error) => {
+        console.error(error);
+        setMasterState('호텔 삭제 실패');
       });
   }
 
@@ -895,7 +940,10 @@ function MasterDataManager({ onClose }) {
                     })}
                   />
                 </Field>
-                <button className="btn btn-primary btn-small" type="button" onClick={saveSelectedPartner}>저장</button>
+                <div className="detail-actions">
+                  <button className="btn btn-primary btn-small" type="button" onClick={saveSelectedPartner}>수정</button>
+                  <button className="btn btn-danger btn-small" type="button" onClick={deleteSelectedPartner}>삭제</button>
+                </div>
               </div>
             </div>
           </section>
@@ -988,13 +1036,21 @@ function MasterDataManager({ onClose }) {
                       onChange={(event) => updateSelectedHotel({ phone: event.target.value })}
                     />
                   </Field>
-                  <button className="btn btn-primary btn-small" type="button" onClick={saveSelectedHotel}>저장</button>
+                  <div className="detail-actions">
+                    <button className="btn btn-primary btn-small" type="button" onClick={saveSelectedHotel}>수정</button>
+                    <button className="btn btn-danger btn-small" type="button" onClick={deleteSelectedHotel}>삭제</button>
+                  </div>
                 </div>
               </div>
               <div className="master-card room-card">
                 <header>객실</header>
                 <div className="room-list">
-                  {rooms.map((room) => <div key={room}>{room}</div>)}
+                  {rooms.map((room, index) => (
+                    <div className="room-row" key={`${room}-${index}`}>
+                      <span>{room}</span>
+                      <button type="button" onClick={() => removeRoom(index)}>삭제</button>
+                    </div>
+                  ))}
                 </div>
                 <footer>
                   <input value={newRoom} onChange={(event) => setNewRoom(event.target.value)} placeholder="객실명" />
