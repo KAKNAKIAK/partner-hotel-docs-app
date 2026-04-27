@@ -598,6 +598,7 @@ function MasterDataManager({ onClose }) {
   const [activeTab, setActiveTab] = useState('hotels');
   const [partners, setPartners] = useState(seedPartners);
   const [hotels, setHotels] = useState(seedHotels);
+  const [selectedPartnerId, setSelectedPartnerId] = useState(seedPartners[0]?.id || '');
   const [selectedCountry, setSelectedCountry] = useState(seedHotels[0]?.country || 'Vietnam');
   const [selectedCity, setSelectedCity] = useState(seedHotels[0]?.city || 'Nha Trang');
   const [selectedHotelId, setSelectedHotelId] = useState(seedHotels[0]?.id || '');
@@ -606,7 +607,6 @@ function MasterDataManager({ onClose }) {
   const [newHotelEnglish, setNewHotelEnglish] = useState('');
   const [newHotelKorean, setNewHotelKorean] = useState('');
   const [newRoom, setNewRoom] = useState('');
-  const [newPartnerCi, setNewPartnerCi] = useState('');
   const [newPartner, setNewPartner] = useState('');
   const [isCiDragging, setIsCiDragging] = useState(false);
   const [isHotelViDragging, setIsHotelViDragging] = useState(false);
@@ -617,6 +617,7 @@ function MasterDataManager({ onClose }) {
   );
   const visibleHotels = hotels.filter((hotel) => hotel.country === selectedCountry && hotel.city === selectedCity);
   const selectedHotel = hotels.find((hotel) => hotel.id === selectedHotelId) || visibleHotels[0] || hotels[0];
+  const selectedPartner = partners.find((partner) => partner.id === selectedPartnerId) || partners[0];
   const rooms = selectedHotel?.rooms || [
     'Deluxe King / Twin Garden view',
     'Deluxe King Pool View',
@@ -675,28 +676,33 @@ function MasterDataManager({ onClose }) {
   function addPartner() {
     const trimmed = newPartner.trim();
     if (!trimmed) return;
-    setPartners((current) => [
-      ...current,
-      {
-        id: makeId(),
-        name: trimmed,
-        ciUrl: newPartnerCi.trim(),
-        recipientName: trimmed,
-        senderName: '',
-        bankAccount: '',
-        invoiceRemark: '',
-        paymentTerms: '',
-      },
-    ]);
-    setNewPartnerCi('');
+    const partner = {
+      id: makeId(),
+      name: trimmed,
+      ciUrl: '',
+      recipientName: trimmed,
+      senderName: '',
+      bankAccount: '',
+      invoiceRemark: '',
+      paymentTerms: '',
+    };
+    setPartners((current) => [...current, partner]);
+    setSelectedPartnerId(partner.id);
     setNewPartner('');
   }
 
+  function updateSelectedPartner(changes) {
+    if (!selectedPartner) return;
+    setPartners((current) => current.map((partner) => (
+      partner.id === selectedPartner.id ? { ...partner, ...changes } : partner
+    )));
+  }
+
   function loadPartnerCi(file) {
-    if (!file || !file.type.startsWith('image/')) return;
+    if (!file || !file.type.startsWith('image/') || !selectedPartner) return;
     const reader = new FileReader();
     reader.onload = () => {
-      setNewPartnerCi(String(reader.result || ''));
+      updateSelectedPartner({ ciUrl: String(reader.result || '') });
     };
     reader.readAsDataURL(file);
   }
@@ -754,12 +760,17 @@ function MasterDataManager({ onClose }) {
         </nav>
 
         {activeTab === 'partners' && (
-          <section className="master-simple">
-            <div className="master-card agency-card">
+          <section className="master-agency-grid">
+            <div className="master-card agency-list-card">
               <header>여행사 목록</header>
               <div className="agency-list">
                 {partners.map((partner) => (
-                  <button className="agency-row" key={partner.id} type="button">
+                  <button
+                    className={`agency-row ${selectedPartner?.id === partner.id ? 'active' : ''}`}
+                    key={partner.id}
+                    type="button"
+                    onClick={() => setSelectedPartnerId(partner.id)}
+                  >
                     <span>
                       {partner.ciUrl ? <img src={partner.ciUrl} alt="" /> : partner.name.slice(0, 4).toUpperCase()}
                     </span>
@@ -767,9 +778,17 @@ function MasterDataManager({ onClose }) {
                   </button>
                 ))}
               </div>
-              <footer className="agency-add">
+              <footer>
+                <input value={newPartner} onChange={(event) => setNewPartner(event.target.value)} placeholder="여행사명" />
+                <button className="master-add" type="button" onClick={addPartner}>+</button>
+              </footer>
+            </div>
+
+            <div className="master-card agency-detail-card">
+              <header>여행사 상세 정보</header>
+              <div className="agency-detail-body">
                 <label
-                  className={`ci-dropzone ${isCiDragging ? 'dragging' : ''} ${newPartnerCi ? 'has-image' : ''}`}
+                  className={`logo-box ${isCiDragging ? 'dragging' : ''} ${selectedPartner?.ciUrl ? 'has-image' : ''}`}
                   htmlFor={ciInputId}
                   onDragEnter={(event) => {
                     event.preventDefault();
@@ -785,11 +804,19 @@ function MasterDataManager({ onClose }) {
                     accept="image/*"
                     onChange={(event) => loadPartnerCi(event.target.files?.[0])}
                   />
-                  {newPartnerCi ? <img src={newPartnerCi} alt="" /> : <span>CI 드롭</span>}
+                  {selectedPartner?.ciUrl ? <img src={selectedPartner.ciUrl} alt="" /> : <span>CI</span>}
                 </label>
-                <input value={newPartner} onChange={(event) => setNewPartner(event.target.value)} placeholder="여행사명" />
-                <button className="master-add" type="button" onClick={addPartner}>+</button>
-              </footer>
+                <Field label="여행사명">
+                  <input
+                    value={selectedPartner?.name || ''}
+                    onChange={(event) => updateSelectedPartner({
+                      name: event.target.value,
+                      recipientName: event.target.value,
+                    })}
+                  />
+                </Field>
+                <button className="btn btn-primary btn-small" type="button">저장</button>
+              </div>
             </div>
           </section>
         )}
