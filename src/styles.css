@@ -1150,6 +1150,30 @@ th {
   width: 120px;
 }
 
+.master-phrase-grid {
+  align-content: stretch;
+}
+
+.phrase-detail-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 12px;
+  padding: 14px;
+}
+
+.phrase-detail-body textarea {
+  min-height: 220px;
+}
+
+.phrase-actions {
+  grid-column: 1 !important;
+}
+
+.phrase-actions .btn {
+  width: 120px;
+}
+
 .hotel-detail-body .field:nth-of-type(1) {
   grid-column: 1;
 }

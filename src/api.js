@@ -74,6 +74,23 @@ function companyInfoToRow(companyInfo) {
   };
 }
 
+function phraseFromRow(item = {}) {
+  return {
+    id: item.id,
+    title: item.title || '',
+    content: item.content || '',
+  };
+}
+
+function phraseToRow(phrase) {
+  return {
+    id: phrase.id,
+    title: phrase.title || null,
+    content: phrase.content || null,
+    updated_at: new Date().toISOString(),
+  };
+}
+
 export async function listCompanyInfos() {
   const data = await supabaseFetch('company_settings?select=*&order=name.asc');
   return data.map(companyInfoFromRow);
@@ -110,6 +127,35 @@ export async function updateCompanyInfo(companyInfo) {
 
 export async function deleteCompanyInfo(id) {
   await supabaseFetch(`company_settings?id=eq.${id}`, {
+    method: 'DELETE',
+    headers: { Prefer: 'return=minimal' },
+  });
+  return id;
+}
+
+export async function listPhraseSnippets() {
+  const data = await supabaseFetch('phrase_snippets?select=*&order=title.asc');
+  return data.map(phraseFromRow);
+}
+
+export async function createPhraseSnippet(phrase) {
+  const data = await supabaseFetch('phrase_snippets?select=*', {
+    method: 'POST',
+    body: JSON.stringify(phraseToRow(phrase)),
+  });
+  return phraseFromRow(data[0]);
+}
+
+export async function updatePhraseSnippet(phrase) {
+  const data = await supabaseFetch(`phrase_snippets?id=eq.${phrase.id}&select=*`, {
+    method: 'PATCH',
+    body: JSON.stringify(phraseToRow(phrase)),
+  });
+  return phraseFromRow(data[0]);
+}
+
+export async function deletePhraseSnippet(id) {
+  await supabaseFetch(`phrase_snippets?id=eq.${id}`, {
     method: 'DELETE',
     headers: { Prefer: 'return=minimal' },
   });

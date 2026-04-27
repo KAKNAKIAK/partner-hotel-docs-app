@@ -5,16 +5,19 @@ import {
   createCompanyInfo,
   createCountry,
   createPartner,
+  createPhraseSnippet,
   createRegion,
   deleteCompanyInfo,
   deleteCountry,
   deleteHotel,
   deletePartner,
+  deletePhraseSnippet,
   deleteRegion,
   listCountries,
   listCompanyInfos,
   listHotels,
   listPartners,
+  listPhraseSnippets,
   listRegions,
   loadLatestReservation,
   saveReservation,
@@ -25,6 +28,7 @@ import {
   updateCountry,
   updateHotel,
   updatePartner,
+  updatePhraseSnippet,
   updateRegion,
 } from './api.js';
 import { hasSupabaseConfig } from './supabaseClient.js';
@@ -69,6 +73,14 @@ function emptyCompanyInfo() {
     email: '',
     bankAccount: '',
     sealUrl: '',
+  };
+}
+
+function emptyPhraseSnippet() {
+  return {
+    id: '',
+    title: '',
+    content: '',
   };
 }
 
@@ -664,7 +676,9 @@ function MasterDataManager({ onClose }) {
   const [countries, setCountries] = useState([]);
   const [regions, setRegions] = useState([]);
   const [companyInfos, setCompanyInfos] = useState([]);
+  const [phraseSnippets, setPhraseSnippets] = useState([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
+  const [selectedPhraseId, setSelectedPhraseId] = useState('');
   const [selectedPartnerId, setSelectedPartnerId] = useState('');
   const [selectedCountryId, setSelectedCountryId] = useState('');
   const [selectedRegionId, setSelectedRegionId] = useState('');
@@ -676,6 +690,7 @@ function MasterDataManager({ onClose }) {
   const [newRoom, setNewRoom] = useState('');
   const [newPartner, setNewPartner] = useState('');
   const [newCompanyName, setNewCompanyName] = useState('');
+  const [newPhraseTitle, setNewPhraseTitle] = useState('');
   const [isCiDragging, setIsCiDragging] = useState(false);
   const [isHotelViDragging, setIsHotelViDragging] = useState(false);
   const [isCompanyCiDragging, setIsCompanyCiDragging] = useState(false);
@@ -689,19 +704,22 @@ function MasterDataManager({ onClose }) {
   const selectedHotel = hotels.find((hotel) => hotel.id === selectedHotelId) || visibleHotels[0] || hotels[0];
   const selectedPartner = partners.find((partner) => partner.id === selectedPartnerId) || partners[0];
   const selectedCompany = companyInfos.find((company) => company.id === selectedCompanyId) || companyInfos[0] || emptyCompanyInfo();
+  const selectedPhrase = phraseSnippets.find((phrase) => phrase.id === selectedPhraseId) || phraseSnippets[0] || emptyPhraseSnippet();
   const rooms = selectedHotel?.rooms || [];
 
   useEffect(() => {
     let ignore = false;
-    Promise.all([listPartners(), listHotels(), listCountries(), listRegions(), listCompanyInfos()])
-      .then(([partnerRows, hotelRows, countryRows, regionRows, companyRows]) => {
+    Promise.all([listPartners(), listHotels(), listCountries(), listRegions(), listCompanyInfos(), listPhraseSnippets()])
+      .then(([partnerRows, hotelRows, countryRows, regionRows, companyRows, phraseRows]) => {
         if (ignore) return;
         setPartners(partnerRows);
         setHotels(hotelRows);
         setCountries(countryRows);
         setRegions(regionRows);
         setCompanyInfos(companyRows);
+        setPhraseSnippets(phraseRows);
         setSelectedCompanyId(companyRows[0]?.id || '');
+        setSelectedPhraseId(phraseRows[0]?.id || '');
         setSelectedPartnerId(partnerRows[0]?.id || '');
         setSelectedCountryId(countryRows[0]?.id || '');
         setSelectedRegionId(regionRows.find((region) => region.countryId === countryRows[0]?.id)?.id || '');
@@ -1175,6 +1193,78 @@ function MasterDataManager({ onClose }) {
     loadCompanyImage(event.dataTransfer.files?.[0], 'sealUrl');
   }
 
+  function updateSelectedPhrase(changes) {
+    if (!selectedPhrase.id) return;
+    setPhraseSnippets((current) => current.map((phrase) => (
+      phrase.id === selectedPhrase.id ? { ...phrase, ...changes } : phrase
+    )));
+  }
+
+  function addPhraseSnippet() {
+    const title = newPhraseTitle.trim();
+    if (!title) return;
+    const phrase = { ...emptyPhraseSnippet(), id: makeId(), title };
+    setMasterState('문구 저장 중');
+    createPhraseSnippet(phrase)
+      .then((saved) => {
+        setPhraseSnippets((current) => [...current, saved]);
+        setSelectedPhraseId(saved.id);
+        setNewPhraseTitle('');
+        setMasterState('문구 저장 완료');
+      })
+      .catch((error) => {
+        console.error(error);
+        setMasterState('문구 저장 실패');
+      });
+  }
+
+  function renamePhraseSnippet(phrase) {
+    const title = window.prompt('문구 제목을 수정하세요.', phrase.title || '자주쓰는 문구')?.trim();
+    if (!title || title === phrase.title) return;
+    setMasterState('문구 제목 수정 중');
+    updatePhraseSnippet({ ...phrase, title })
+      .then((saved) => {
+        setPhraseSnippets((current) => current.map((item) => (item.id === saved.id ? saved : item)));
+        setSelectedPhraseId(saved.id);
+        setMasterState('문구 제목 수정 완료');
+      })
+      .catch((error) => {
+        console.error(error);
+        setMasterState('문구 제목 수정 실패');
+      });
+  }
+
+  function saveSelectedPhrase() {
+    if (!selectedPhrase.id) return;
+    setMasterState('문구 수정 중');
+    updatePhraseSnippet(selectedPhrase)
+      .then((saved) => {
+        setPhraseSnippets((current) => current.map((phrase) => (phrase.id === saved.id ? saved : phrase)));
+        setMasterState('문구 수정 완료');
+      })
+      .catch((error) => {
+        console.error(error);
+        setMasterState('문구 수정 실패');
+      });
+  }
+
+  function removePhraseSnippet(phrase) {
+    const confirmed = window.confirm(`${phrase.title || '자주쓰는 문구'} 항목을 삭제할까요?`);
+    if (!confirmed) return;
+    setMasterState('문구 삭제 중');
+    deletePhraseSnippet(phrase.id)
+      .then(() => {
+        const next = phraseSnippets.filter((item) => item.id !== phrase.id);
+        setPhraseSnippets(next);
+        setSelectedPhraseId(next[0]?.id || '');
+        setMasterState('문구 삭제 완료');
+      })
+      .catch((error) => {
+        console.error(error);
+        setMasterState('문구 삭제 실패');
+      });
+  }
+
   function saveSelectedHotel() {
     if (!selectedHotel) return;
     setMasterState('호텔 수정 중');
@@ -1218,6 +1308,7 @@ function MasterDataManager({ onClose }) {
     ['hotels', '호텔 정보'],
     ['partners', '여행사'],
     ['company', '업체 정보'],
+    ['phrases', '자주쓰는 문구 DB'],
   ];
 
   return (
@@ -1421,6 +1512,59 @@ function MasterDataManager({ onClose }) {
                 </Field>
                 <div className="detail-actions company-actions">
                   <button className="btn btn-primary btn-small" type="button" onClick={saveCompanySettings}>저장</button>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'phrases' && (
+          <section className="master-agency-grid master-phrase-grid">
+            <div className="master-card phrase-list-card">
+              <header>자주쓰는 문구 목록</header>
+              <div className="master-list">
+                {phraseSnippets.map((phrase) => (
+                  <div
+                    className={`master-row phrase-row ${selectedPhrase.id === phrase.id ? 'active' : ''}`}
+                    key={phrase.id}
+                  >
+                    <button type="button" className="master-row-main" onClick={() => setSelectedPhraseId(phrase.id)}>
+                      <strong>{phrase.title || '자주쓰는 문구'}</strong>
+                    </button>
+                    <div className="master-row-actions">
+                      <button type="button" onClick={() => renamePhraseSnippet(phrase)}>수정</button>
+                      <button type="button" className="danger" onClick={() => removePhraseSnippet(phrase)}>삭제</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <footer>
+                <input
+                  value={newPhraseTitle}
+                  onChange={(event) => setNewPhraseTitle(event.target.value)}
+                  placeholder="문구 제목"
+                />
+                <button className="master-add" type="button" onClick={addPhraseSnippet}>+</button>
+              </footer>
+            </div>
+
+            <div className="master-card phrase-detail-card">
+              <header>문구 상세 정보</header>
+              <div className="phrase-detail-body">
+                <Field label="문구 제목">
+                  <input
+                    value={selectedPhrase.title}
+                    onChange={(event) => updateSelectedPhrase({ title: event.target.value })}
+                  />
+                </Field>
+                <Field label="문구 내용">
+                  <textarea
+                    value={selectedPhrase.content}
+                    onChange={(event) => updateSelectedPhrase({ content: event.target.value })}
+                  />
+                </Field>
+                <div className="detail-actions phrase-actions">
+                  <button className="btn btn-primary btn-small" type="button" onClick={saveSelectedPhrase}>저장</button>
                 </div>
               </div>
             </div>

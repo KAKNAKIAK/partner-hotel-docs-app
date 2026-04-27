@@ -35,6 +35,14 @@ create table if not exists public.company_settings (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.phrase_snippets (
+  id text primary key,
+  title text not null,
+  content text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.hotels (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -87,6 +95,7 @@ alter table public.partners enable row level security;
 alter table public.countries enable row level security;
 alter table public.regions enable row level security;
 alter table public.company_settings enable row level security;
+alter table public.phrase_snippets enable row level security;
 alter table public.hotels enable row level security;
 alter table public.reservations enable row level security;
 
@@ -98,6 +107,8 @@ alter table public.company_settings add column if not exists phone text;
 alter table public.company_settings add column if not exists email text;
 alter table public.company_settings add column if not exists bank_account text;
 alter table public.company_settings add column if not exists seal_url text;
+alter table public.phrase_snippets add column if not exists title text;
+alter table public.phrase_snippets add column if not exists content text;
 alter table public.hotels add column if not exists korean_name text;
 alter table public.hotels add column if not exists logo_url text;
 alter table public.hotels add column if not exists rooms text[] not null default '{}';
@@ -118,6 +129,10 @@ drop policy if exists "company settings read anon" on public.company_settings;
 drop policy if exists "company settings insert anon" on public.company_settings;
 drop policy if exists "company settings update anon" on public.company_settings;
 drop policy if exists "company settings delete anon" on public.company_settings;
+drop policy if exists "phrase snippets read anon" on public.phrase_snippets;
+drop policy if exists "phrase snippets insert anon" on public.phrase_snippets;
+drop policy if exists "phrase snippets update anon" on public.phrase_snippets;
+drop policy if exists "phrase snippets delete anon" on public.phrase_snippets;
 drop policy if exists "hotels read anon" on public.hotels;
 drop policy if exists "hotels insert anon" on public.hotels;
 drop policy if exists "hotels update anon" on public.hotels;
@@ -142,6 +157,10 @@ create policy "company settings read anon" on public.company_settings for select
 create policy "company settings insert anon" on public.company_settings for insert with check (true);
 create policy "company settings update anon" on public.company_settings for update using (true) with check (true);
 create policy "company settings delete anon" on public.company_settings for delete using (true);
+create policy "phrase snippets read anon" on public.phrase_snippets for select using (true);
+create policy "phrase snippets insert anon" on public.phrase_snippets for insert with check (true);
+create policy "phrase snippets update anon" on public.phrase_snippets for update using (true) with check (true);
+create policy "phrase snippets delete anon" on public.phrase_snippets for delete using (true);
 create policy "hotels read anon" on public.hotels for select using (true);
 create policy "hotels insert anon" on public.hotels for insert with check (true);
 create policy "hotels update anon" on public.hotels for update using (true) with check (true);
