@@ -254,6 +254,7 @@ function App() {
     patch({
       companyId: company.id,
       companyName: company.name,
+      companySealUrl: company.sealUrl,
       senderName: company.name,
       bankAccount: company.bankAccount,
     });
@@ -1675,7 +1676,14 @@ function Invoice({ reservation, foreignTotal, krwTotal }) {
         <div><strong>적용환율</strong><span>{Number(reservation.exchangeRate || 0).toLocaleString('ko-KR')} / {reservation.exchangeRateDate}</span></div>
         <div className="doc-total"><strong>총입금액(원화)</strong><span>{krw(krwTotal)}</span></div>
       </div>
-      <div className="notice-box"><strong>입금 계좌</strong><br />{reservation.bankAccount}<br /><br />{reservation.invoiceRemark}</div>
+      <div className="notice-box invoice-payment-box">
+        <div>
+          <strong>입금 계좌</strong><br />{reservation.bankAccount}<br /><br />{reservation.invoiceRemark}
+        </div>
+        {reservation.companySealUrl && (
+          <img className="invoice-seal" src={reservation.companySealUrl} alt="" />
+        )}
+      </div>
     </article>
   );
 }
