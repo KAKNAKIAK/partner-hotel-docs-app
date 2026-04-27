@@ -13,7 +13,9 @@ import {
   listHotels,
   listPartners,
   listRegions,
+  loadCompanyInfo,
   loadLatestReservation,
+  saveCompanyInfo,
   saveReservation,
   searchHotels,
   searchPartners,
@@ -52,6 +54,18 @@ function applyRounding(value, mode) {
   if (mode === 'floor') return Math.floor(value);
   if (mode === 'ceil') return Math.ceil(value);
   return Math.round(value);
+}
+
+function emptyCompanyInfo() {
+  return {
+    id: 'default',
+    ciUrl: '',
+    address: '',
+    phone: '',
+    email: '',
+    bankAccount: '',
+    sealUrl: '',
+  };
 }
 
 function SearchSelect({ label, value, loadOptions, getLabel, getMeta, onSelect, placeholder }) {
@@ -615,11 +629,14 @@ function App() {
 function MasterDataManager({ onClose }) {
   const ciInputId = useId();
   const hotelViInputId = useId();
+  const companyCiInputId = useId();
+  const companySealInputId = useId();
   const [activeTab, setActiveTab] = useState('hotels');
   const [partners, setPartners] = useState([]);
   const [hotels, setHotels] = useState([]);
   const [countries, setCountries] = useState([]);
   const [regions, setRegions] = useState([]);
+  const [companyInfo, setCompanyInfo] = useState(emptyCompanyInfo());
   const [selectedPartnerId, setSelectedPartnerId] = useState('');
   const [selectedCountryId, setSelectedCountryId] = useState('');
   const [selectedRegionId, setSelectedRegionId] = useState('');
@@ -632,6 +649,8 @@ function MasterDataManager({ onClose }) {
   const [newPartner, setNewPartner] = useState('');
   const [isCiDragging, setIsCiDragging] = useState(false);
   const [isHotelViDragging, setIsHotelViDragging] = useState(false);
+  const [isCompanyCiDragging, setIsCompanyCiDragging] = useState(false);
+  const [isCompanySealDragging, setIsCompanySealDragging] = useState(false);
   const [masterState, setMasterState] = useState('불러오는 중');
 
   const selectedCountry = countries.find((country) => country.id === selectedCountryId);
@@ -644,13 +663,14 @@ function MasterDataManager({ onClose }) {
 
   useEffect(() => {
     let ignore = false;
-    Promise.all([listPartners(), listHotels(), listCountries(), listRegions()])
-      .then(([partnerRows, hotelRows, countryRows, regionRows]) => {
+    Promise.all([listPartners(), listHotels(), listCountries(), listRegions(), loadCompanyInfo()])
+      .then(([partnerRows, hotelRows, countryRows, regionRows, companyRow]) => {
         if (ignore) return;
         setPartners(partnerRows);
         setHotels(hotelRows);
         setCountries(countryRows);
         setRegions(regionRows);
+        setCompanyInfo(companyRow);
         setSelectedPartnerId(partnerRows[0]?.id || '');
         setSelectedCountryId(countryRows[0]?.id || '');
         setSelectedRegionId(regionRows.find((region) => region.countryId === countryRows[0]?.id)?.id || '');
@@ -1031,6 +1051,44 @@ function MasterDataManager({ onClose }) {
     loadHotelVi(event.dataTransfer.files?.[0]);
   }
 
+  function updateCompanyInfo(changes) {
+    setCompanyInfo((current) => ({ ...current, ...changes }));
+  }
+
+  function saveCompanySettings() {
+    setMasterState('업체 정보 저장 중');
+    saveCompanyInfo(companyInfo)
+      .then((saved) => {
+        setCompanyInfo(saved);
+        setMasterState('업체 정보 저장 완료');
+      })
+      .catch((error) => {
+        console.error(error);
+        setMasterState('업체 정보 저장 실패');
+      });
+  }
+
+  function loadCompanyImage(file, key) {
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      updateCompanyInfo({ [key]: String(reader.result || '') });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleCompanyCiDrop(event) {
+    event.preventDefault();
+    setIsCompanyCiDragging(false);
+    loadCompanyImage(event.dataTransfer.files?.[0], 'ciUrl');
+  }
+
+  function handleCompanySealDrop(event) {
+    event.preventDefault();
+    setIsCompanySealDragging(false);
+    loadCompanyImage(event.dataTransfer.files?.[0], 'sealUrl');
+  }
+
   function saveSelectedHotel() {
     if (!selectedHotel) return;
     setMasterState('호텔 수정 중');
@@ -1073,6 +1131,7 @@ function MasterDataManager({ onClose }) {
   const tabs = [
     ['hotels', '호텔 정보'],
     ['partners', '여행사'],
+    ['company', '업체 정보'],
   ];
 
   return (
@@ -1161,6 +1220,90 @@ function MasterDataManager({ onClose }) {
                 <div className="detail-actions">
                   <button className="btn btn-primary btn-small" type="button" onClick={saveSelectedPartner}>수정</button>
                   <button className="btn btn-danger btn-small" type="button" onClick={deleteSelectedPartner}>삭제</button>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'company' && (
+          <section className="master-company-panel">
+            <div className="master-card company-info-card">
+              <header>업체 정보</header>
+              <div className="company-info-body">
+                <div className="company-image-grid">
+                  <Field label="CI">
+                    <label
+                      className={`logo-box company-image-dropzone ${isCompanyCiDragging ? 'dragging' : ''} ${companyInfo.ciUrl ? 'has-image' : ''}`}
+                      htmlFor={companyCiInputId}
+                      onDragEnter={(event) => {
+                        event.preventDefault();
+                        setIsCompanyCiDragging(true);
+                      }}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDragLeave={() => setIsCompanyCiDragging(false)}
+                      onDrop={handleCompanyCiDrop}
+                    >
+                      <input
+                        id={companyCiInputId}
+                        type="file"
+                        accept="image/*"
+                        onChange={(event) => loadCompanyImage(event.target.files?.[0], 'ciUrl')}
+                      />
+                      {companyInfo.ciUrl ? <img src={companyInfo.ciUrl} alt="" /> : <span>CI</span>}
+                    </label>
+                  </Field>
+                  <Field label="직인">
+                    <label
+                      className={`logo-box company-image-dropzone ${isCompanySealDragging ? 'dragging' : ''} ${companyInfo.sealUrl ? 'has-image' : ''}`}
+                      htmlFor={companySealInputId}
+                      onDragEnter={(event) => {
+                        event.preventDefault();
+                        setIsCompanySealDragging(true);
+                      }}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDragLeave={() => setIsCompanySealDragging(false)}
+                      onDrop={handleCompanySealDrop}
+                    >
+                      <input
+                        id={companySealInputId}
+                        type="file"
+                        accept="image/*"
+                        onChange={(event) => loadCompanyImage(event.target.files?.[0], 'sealUrl')}
+                      />
+                      {companyInfo.sealUrl ? <img src={companyInfo.sealUrl} alt="" /> : <span>직인</span>}
+                    </label>
+                  </Field>
+                </div>
+                <Field label="주소">
+                  <textarea
+                    value={companyInfo.address}
+                    onChange={(event) => updateCompanyInfo({ address: event.target.value })}
+                  />
+                </Field>
+                <div className="company-field-grid">
+                  <Field label="전화번호">
+                    <input
+                      value={companyInfo.phone}
+                      onChange={(event) => updateCompanyInfo({ phone: event.target.value })}
+                    />
+                  </Field>
+                  <Field label="이메일주소">
+                    <input
+                      type="email"
+                      value={companyInfo.email}
+                      onChange={(event) => updateCompanyInfo({ email: event.target.value })}
+                    />
+                  </Field>
+                </div>
+                <Field label="계좌번호">
+                  <input
+                    value={companyInfo.bankAccount}
+                    onChange={(event) => updateCompanyInfo({ bankAccount: event.target.value })}
+                  />
+                </Field>
+                <div className="detail-actions company-actions">
+                  <button className="btn btn-primary btn-small" type="button" onClick={saveCompanySettings}>저장</button>
                 </div>
               </div>
             </div>

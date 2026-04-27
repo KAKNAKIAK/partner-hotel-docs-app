@@ -47,6 +47,51 @@ function regionFromRow(item) {
   };
 }
 
+function companyInfoFromRow(item = {}) {
+  return {
+    id: item.id || 'default',
+    ciUrl: item.ci_url || '',
+    address: item.address || '',
+    phone: item.phone || '',
+    email: item.email || '',
+    bankAccount: item.bank_account || '',
+    sealUrl: item.seal_url || '',
+  };
+}
+
+function companyInfoToRow(companyInfo) {
+  return {
+    id: companyInfo.id || 'default',
+    ci_url: companyInfo.ciUrl || null,
+    address: companyInfo.address || null,
+    phone: companyInfo.phone || null,
+    email: companyInfo.email || null,
+    bank_account: companyInfo.bankAccount || null,
+    seal_url: companyInfo.sealUrl || null,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+export async function loadCompanyInfo() {
+  const data = await supabaseFetch('company_settings?id=eq.default&select=*&limit=1');
+  return companyInfoFromRow(data[0]);
+}
+
+export async function saveCompanyInfo(companyInfo) {
+  const payload = companyInfoToRow(companyInfo);
+  const updated = await supabaseFetch('company_settings?id=eq.default&select=*', {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+  if (updated.length) return companyInfoFromRow(updated[0]);
+
+  const inserted = await supabaseFetch('company_settings?select=*', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return companyInfoFromRow(inserted[0]);
+}
+
 export async function listCountries() {
   const data = await supabaseFetch('countries?select=*&order=name.asc');
   return data.map(countryFromRow);

@@ -22,6 +22,18 @@ create table if not exists public.regions (
   unique(country_id, name)
 );
 
+create table if not exists public.company_settings (
+  id text primary key default 'default',
+  ci_url text,
+  address text,
+  phone text,
+  email text,
+  bank_account text,
+  seal_url text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.hotels (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -73,10 +85,17 @@ create table if not exists public.reservations (
 alter table public.partners enable row level security;
 alter table public.countries enable row level security;
 alter table public.regions enable row level security;
+alter table public.company_settings enable row level security;
 alter table public.hotels enable row level security;
 alter table public.reservations enable row level security;
 
 alter table public.partners add column if not exists ci_url text;
+alter table public.company_settings add column if not exists ci_url text;
+alter table public.company_settings add column if not exists address text;
+alter table public.company_settings add column if not exists phone text;
+alter table public.company_settings add column if not exists email text;
+alter table public.company_settings add column if not exists bank_account text;
+alter table public.company_settings add column if not exists seal_url text;
 alter table public.hotels add column if not exists korean_name text;
 alter table public.hotels add column if not exists logo_url text;
 alter table public.hotels add column if not exists rooms text[] not null default '{}';
@@ -93,6 +112,9 @@ drop policy if exists "regions read anon" on public.regions;
 drop policy if exists "regions insert anon" on public.regions;
 drop policy if exists "regions update anon" on public.regions;
 drop policy if exists "regions delete anon" on public.regions;
+drop policy if exists "company settings read anon" on public.company_settings;
+drop policy if exists "company settings insert anon" on public.company_settings;
+drop policy if exists "company settings update anon" on public.company_settings;
 drop policy if exists "hotels read anon" on public.hotels;
 drop policy if exists "hotels insert anon" on public.hotels;
 drop policy if exists "hotels update anon" on public.hotels;
@@ -113,6 +135,9 @@ create policy "regions read anon" on public.regions for select using (true);
 create policy "regions insert anon" on public.regions for insert with check (true);
 create policy "regions update anon" on public.regions for update using (true) with check (true);
 create policy "regions delete anon" on public.regions for delete using (true);
+create policy "company settings read anon" on public.company_settings for select using (true);
+create policy "company settings insert anon" on public.company_settings for insert with check (true);
+create policy "company settings update anon" on public.company_settings for update using (true) with check (true);
 create policy "hotels read anon" on public.hotels for select using (true);
 create policy "hotels insert anon" on public.hotels for insert with check (true);
 create policy "hotels update anon" on public.hotels for update using (true) with check (true);
