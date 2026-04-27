@@ -593,6 +593,7 @@ function App() {
 }
 
 function MasterDataManager({ onClose }) {
+  const ciInputId = useId();
   const [activeTab, setActiveTab] = useState('hotels');
   const [partners, setPartners] = useState(seedPartners);
   const [hotels, setHotels] = useState(seedHotels);
@@ -606,6 +607,7 @@ function MasterDataManager({ onClose }) {
   const [newRoom, setNewRoom] = useState('');
   const [newPartnerCi, setNewPartnerCi] = useState('');
   const [newPartner, setNewPartner] = useState('');
+  const [isCiDragging, setIsCiDragging] = useState(false);
 
   const countries = Array.from(new Set(hotels.map((hotel) => hotel.country).filter(Boolean)));
   const cities = Array.from(
@@ -687,6 +689,21 @@ function MasterDataManager({ onClose }) {
     setNewPartner('');
   }
 
+  function loadPartnerCi(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setNewPartnerCi(String(reader.result || ''));
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handlePartnerCiDrop(event) {
+    event.preventDefault();
+    setIsCiDragging(false);
+    loadPartnerCi(event.dataTransfer.files?.[0]);
+  }
+
   const tabs = [
     ['hotels', '호텔 정보'],
     ['partners', '여행사'],
@@ -733,11 +750,25 @@ function MasterDataManager({ onClose }) {
                 ))}
               </div>
               <footer className="agency-add">
-                <input
-                  value={newPartnerCi}
-                  onChange={(event) => setNewPartnerCi(event.target.value)}
-                  placeholder="여행사 CI URL"
-                />
+                <label
+                  className={`ci-dropzone ${isCiDragging ? 'dragging' : ''} ${newPartnerCi ? 'has-image' : ''}`}
+                  htmlFor={ciInputId}
+                  onDragEnter={(event) => {
+                    event.preventDefault();
+                    setIsCiDragging(true);
+                  }}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDragLeave={() => setIsCiDragging(false)}
+                  onDrop={handlePartnerCiDrop}
+                >
+                  <input
+                    id={ciInputId}
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => loadPartnerCi(event.target.files?.[0])}
+                  />
+                  {newPartnerCi ? <img src={newPartnerCi} alt="" /> : <span>CI 드롭</span>}
+                </label>
                 <input value={newPartner} onChange={(event) => setNewPartner(event.target.value)} placeholder="여행사명" />
                 <button className="master-add" type="button" onClick={addPartner}>+</button>
               </footer>
