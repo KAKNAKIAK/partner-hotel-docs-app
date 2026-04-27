@@ -2,23 +2,25 @@ import { cloneElement, isValidElement, useEffect, useId, useMemo, useState } fro
 import { initialReservation } from './data.js';
 import {
   createHotel,
+  createCompanyInfo,
   createCountry,
   createPartner,
   createRegion,
+  deleteCompanyInfo,
   deleteCountry,
   deleteHotel,
   deletePartner,
   deleteRegion,
   listCountries,
+  listCompanyInfos,
   listHotels,
   listPartners,
   listRegions,
-  loadCompanyInfo,
   loadLatestReservation,
-  saveCompanyInfo,
   saveReservation,
   searchHotels,
   searchPartners,
+  updateCompanyInfo,
   updateCountry,
   updateHotel,
   updatePartner,
@@ -637,7 +639,8 @@ function MasterDataManager({ onClose }) {
   const [hotels, setHotels] = useState([]);
   const [countries, setCountries] = useState([]);
   const [regions, setRegions] = useState([]);
-  const [companyInfo, setCompanyInfo] = useState(emptyCompanyInfo());
+  const [companyInfos, setCompanyInfos] = useState([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState('');
   const [selectedPartnerId, setSelectedPartnerId] = useState('');
   const [selectedCountryId, setSelectedCountryId] = useState('');
   const [selectedRegionId, setSelectedRegionId] = useState('');
@@ -648,6 +651,7 @@ function MasterDataManager({ onClose }) {
   const [newHotelKorean, setNewHotelKorean] = useState('');
   const [newRoom, setNewRoom] = useState('');
   const [newPartner, setNewPartner] = useState('');
+  const [newCompanyName, setNewCompanyName] = useState('');
   const [isCiDragging, setIsCiDragging] = useState(false);
   const [isHotelViDragging, setIsHotelViDragging] = useState(false);
   const [isCompanyCiDragging, setIsCompanyCiDragging] = useState(false);
@@ -660,18 +664,20 @@ function MasterDataManager({ onClose }) {
   const visibleHotels = hotels.filter((hotel) => hotel.country === selectedCountry?.name && hotel.city === selectedRegion?.name);
   const selectedHotel = hotels.find((hotel) => hotel.id === selectedHotelId) || visibleHotels[0] || hotels[0];
   const selectedPartner = partners.find((partner) => partner.id === selectedPartnerId) || partners[0];
+  const selectedCompany = companyInfos.find((company) => company.id === selectedCompanyId) || companyInfos[0] || emptyCompanyInfo();
   const rooms = selectedHotel?.rooms || [];
 
   useEffect(() => {
     let ignore = false;
-    Promise.all([listPartners(), listHotels(), listCountries(), listRegions(), loadCompanyInfo()])
-      .then(([partnerRows, hotelRows, countryRows, regionRows, companyRow]) => {
+    Promise.all([listPartners(), listHotels(), listCountries(), listRegions(), listCompanyInfos()])
+      .then(([partnerRows, hotelRows, countryRows, regionRows, companyRows]) => {
         if (ignore) return;
         setPartners(partnerRows);
         setHotels(hotelRows);
         setCountries(countryRows);
         setRegions(regionRows);
-        setCompanyInfo(companyRow);
+        setCompanyInfos(companyRows);
+        setSelectedCompanyId(companyRows[0]?.id || '');
         setSelectedPartnerId(partnerRows[0]?.id || '');
         setSelectedCountryId(countryRows[0]?.id || '');
         setSelectedRegionId(regionRows.find((region) => region.countryId === countryRows[0]?.id)?.id || '');
@@ -1052,15 +1058,70 @@ function MasterDataManager({ onClose }) {
     loadHotelVi(event.dataTransfer.files?.[0]);
   }
 
-  function updateCompanyInfo(changes) {
-    setCompanyInfo((current) => ({ ...current, ...changes }));
+  function updateSelectedCompany(changes) {
+    if (!selectedCompany.id) return;
+    setCompanyInfos((current) => current.map((company) => (
+      company.id === selectedCompany.id ? { ...company, ...changes } : company
+    )));
+  }
+
+  function addCompanyInfo() {
+    const name = newCompanyName.trim();
+    if (!name) return;
+    const company = { ...emptyCompanyInfo(), id: makeId(), name };
+    setMasterState('업체 정보 저장 중');
+    createCompanyInfo(company)
+      .then((saved) => {
+        setCompanyInfos((current) => [...current, saved]);
+        setSelectedCompanyId(saved.id);
+        setNewCompanyName('');
+        setMasterState('업체 정보 저장 완료');
+      })
+      .catch((error) => {
+        console.error(error);
+        setMasterState('업체 정보 저장 실패');
+      });
+  }
+
+  function renameCompanyInfo(company) {
+    const name = window.prompt('업체 이름을 수정하세요.', company.name || '업체 정보')?.trim();
+    if (!name || name === company.name) return;
+    setMasterState('업체 이름 수정 중');
+    updateCompanyInfo({ ...company, name })
+      .then((saved) => {
+        setCompanyInfos((current) => current.map((item) => (item.id === saved.id ? saved : item)));
+        setSelectedCompanyId(saved.id);
+        setMasterState('업체 이름 수정 완료');
+      })
+      .catch((error) => {
+        console.error(error);
+        setMasterState('업체 이름 수정 실패');
+      });
+  }
+
+  function removeCompanyInfo(company) {
+    const confirmed = window.confirm(`${company.name || '업체 정보'} 항목을 삭제할까요?`);
+    if (!confirmed) return;
+    setMasterState('업체 정보 삭제 중');
+    deleteCompanyInfo(company.id)
+      .then(() => {
+        const next = companyInfos.filter((item) => item.id !== company.id);
+        setCompanyInfos(next);
+        setSelectedCompanyId(next[0]?.id || '');
+        setMasterState('업체 정보 삭제 완료');
+      })
+      .catch((error) => {
+        console.error(error);
+        setMasterState('업체 정보 삭제 실패');
+      });
   }
 
   function saveCompanySettings() {
+    if (!selectedCompany.id) return;
     setMasterState('업체 정보 저장 중');
-    saveCompanyInfo(companyInfo)
+    updateCompanyInfo(selectedCompany)
       .then((saved) => {
-        setCompanyInfo(saved);
+        setCompanyInfos((current) => current.map((company) => (company.id === saved.id ? saved : company)));
         setMasterState('업체 정보 저장 완료');
       })
       .catch((error) => {
@@ -1073,7 +1134,7 @@ function MasterDataManager({ onClose }) {
     if (!file || !file.type.startsWith('image/')) return;
     const reader = new FileReader();
     reader.onload = () => {
-      updateCompanyInfo({ [key]: String(reader.result || '') });
+      updateSelectedCompany({ [key]: String(reader.result || '') });
     };
     reader.readAsDataURL(file);
   }
@@ -1232,19 +1293,31 @@ function MasterDataManager({ onClose }) {
             <div className="master-card company-list-card">
               <header>업체 정보 목록</header>
               <div className="agency-list">
-                <button className="agency-row active" type="button">
-                  <span>
-                    {companyInfo.ciUrl ? <img src={companyInfo.ciUrl} alt="" /> : 'CI'}
-                  </span>
-                  <strong>{companyInfo.name || '업체 정보'}</strong>
-                </button>
+                {companyInfos.map((company) => (
+                  <div
+                    className={`company-row ${selectedCompany.id === company.id ? 'active' : ''}`}
+                    key={company.id}
+                  >
+                    <button type="button" className="company-row-main" onClick={() => setSelectedCompanyId(company.id)}>
+                      <span>
+                        {company.ciUrl ? <img src={company.ciUrl} alt="" /> : 'CI'}
+                      </span>
+                      <strong>{company.name || '업체 정보'}</strong>
+                    </button>
+                    <div className="master-row-actions">
+                      <button type="button" onClick={() => renameCompanyInfo(company)}>수정</button>
+                      <button type="button" className="danger" onClick={() => removeCompanyInfo(company)}>삭제</button>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <footer className="company-name-edit">
+              <footer>
                 <input
-                  value={companyInfo.name}
-                  onChange={(event) => updateCompanyInfo({ name: event.target.value })}
+                  value={newCompanyName}
+                  onChange={(event) => setNewCompanyName(event.target.value)}
                   placeholder="업체 이름"
                 />
+                <button className="master-add" type="button" onClick={addCompanyInfo}>+</button>
               </footer>
             </div>
 
@@ -1254,7 +1327,7 @@ function MasterDataManager({ onClose }) {
                 <div className="company-image-grid">
                   <Field label="CI">
                     <label
-                      className={`logo-box company-image-dropzone ${isCompanyCiDragging ? 'dragging' : ''} ${companyInfo.ciUrl ? 'has-image' : ''}`}
+                      className={`logo-box company-image-dropzone ${isCompanyCiDragging ? 'dragging' : ''} ${selectedCompany.ciUrl ? 'has-image' : ''}`}
                       htmlFor={companyCiInputId}
                       onDragEnter={(event) => {
                         event.preventDefault();
@@ -1270,12 +1343,12 @@ function MasterDataManager({ onClose }) {
                         accept="image/*"
                         onChange={(event) => loadCompanyImage(event.target.files?.[0], 'ciUrl')}
                       />
-                      {companyInfo.ciUrl ? <img src={companyInfo.ciUrl} alt="" /> : <span>CI</span>}
+                      {selectedCompany.ciUrl ? <img src={selectedCompany.ciUrl} alt="" /> : <span>CI</span>}
                     </label>
                   </Field>
                   <Field label="직인">
                     <label
-                      className={`logo-box company-image-dropzone ${isCompanySealDragging ? 'dragging' : ''} ${companyInfo.sealUrl ? 'has-image' : ''}`}
+                      className={`logo-box company-image-dropzone ${isCompanySealDragging ? 'dragging' : ''} ${selectedCompany.sealUrl ? 'has-image' : ''}`}
                       htmlFor={companySealInputId}
                       onDragEnter={(event) => {
                         event.preventDefault();
@@ -1291,35 +1364,35 @@ function MasterDataManager({ onClose }) {
                         accept="image/*"
                         onChange={(event) => loadCompanyImage(event.target.files?.[0], 'sealUrl')}
                       />
-                      {companyInfo.sealUrl ? <img src={companyInfo.sealUrl} alt="" /> : <span>직인</span>}
+                      {selectedCompany.sealUrl ? <img src={selectedCompany.sealUrl} alt="" /> : <span>직인</span>}
                     </label>
                   </Field>
                 </div>
                 <Field label="주소">
                   <textarea
-                    value={companyInfo.address}
-                    onChange={(event) => updateCompanyInfo({ address: event.target.value })}
+                    value={selectedCompany.address}
+                    onChange={(event) => updateSelectedCompany({ address: event.target.value })}
                   />
                 </Field>
                 <div className="company-field-grid">
                   <Field label="전화번호">
                     <input
-                      value={companyInfo.phone}
-                      onChange={(event) => updateCompanyInfo({ phone: event.target.value })}
+                      value={selectedCompany.phone}
+                      onChange={(event) => updateSelectedCompany({ phone: event.target.value })}
                     />
                   </Field>
                   <Field label="이메일주소">
                     <input
                       type="email"
-                      value={companyInfo.email}
-                      onChange={(event) => updateCompanyInfo({ email: event.target.value })}
+                      value={selectedCompany.email}
+                      onChange={(event) => updateSelectedCompany({ email: event.target.value })}
                     />
                   </Field>
                 </div>
                 <Field label="계좌번호">
                   <input
-                    value={companyInfo.bankAccount}
-                    onChange={(event) => updateCompanyInfo({ bankAccount: event.target.value })}
+                    value={selectedCompany.bankAccount}
+                    onChange={(event) => updateSelectedCompany({ bankAccount: event.target.value })}
                   />
                 </Field>
                 <div className="detail-actions company-actions">

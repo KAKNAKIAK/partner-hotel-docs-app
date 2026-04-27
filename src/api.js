@@ -74,24 +74,34 @@ function companyInfoToRow(companyInfo) {
   };
 }
 
-export async function loadCompanyInfo() {
-  const data = await supabaseFetch('company_settings?id=eq.default&select=*&limit=1');
-  return companyInfoFromRow(data[0]);
+export async function listCompanyInfos() {
+  const data = await supabaseFetch('company_settings?select=*&order=name.asc');
+  return data.map(companyInfoFromRow);
 }
 
-export async function saveCompanyInfo(companyInfo) {
+export async function createCompanyInfo(companyInfo) {
   const payload = companyInfoToRow(companyInfo);
-  const updated = await supabaseFetch('company_settings?id=eq.default&select=*', {
-    method: 'PATCH',
-    body: JSON.stringify(payload),
-  });
-  if (updated.length) return companyInfoFromRow(updated[0]);
-
-  const inserted = await supabaseFetch('company_settings?select=*', {
+  const data = await supabaseFetch('company_settings?select=*', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
-  return companyInfoFromRow(inserted[0]);
+  return companyInfoFromRow(data[0]);
+}
+
+export async function updateCompanyInfo(companyInfo) {
+  const data = await supabaseFetch(`company_settings?id=eq.${companyInfo.id}&select=*`, {
+    method: 'PATCH',
+    body: JSON.stringify(companyInfoToRow(companyInfo)),
+  });
+  return companyInfoFromRow(data[0]);
+}
+
+export async function deleteCompanyInfo(id) {
+  await supabaseFetch(`company_settings?id=eq.${id}`, {
+    method: 'DELETE',
+    headers: { Prefer: 'return=minimal' },
+  });
+  return id;
 }
 
 export async function listCountries() {
