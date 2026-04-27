@@ -920,14 +920,17 @@ th {
   padding: 8px;
 }
 
-.master-list button,
-.hotel-list button,
+.master-row,
 .agency-row {
-  display: block;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
   width: 100%;
   border: 0;
   border-radius: 4px;
-  padding: 11px 12px;
+  margin-bottom: 6px;
+  padding: 7px 8px 7px 12px;
   background: transparent;
   color: var(--navy);
   font-size: 14px;
@@ -935,20 +938,61 @@ th {
   text-align: left;
 }
 
-.master-list button:hover,
-.hotel-list button:hover,
+.master-row:hover,
 .agency-row:hover {
   background: var(--blue-soft);
 }
 
-.master-list button.active,
-.hotel-list button.active {
+.master-row.active {
   background: #2563eb;
   color: #fff;
 }
 
-.hotel-list button {
-  margin-bottom: 6px;
+.master-row-main {
+  min-width: 0;
+  border: 0;
+  padding: 4px 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.master-row-actions,
+.room-actions {
+  display: flex;
+  gap: 5px;
+  justify-content: flex-end;
+}
+
+.master-row-actions button,
+.room-actions button {
+  border: 0;
+  border-radius: 6px;
+  padding: 5px 7px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.master-row-actions .danger,
+.room-actions .danger {
+  background: #fff1f2;
+  color: #b91c1c;
+}
+
+.master-row.active .master-row-actions button {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+.master-row.active .master-row-actions .danger {
+  background: rgba(255, 255, 255, 0.24);
+  color: #fff;
+}
+
+.hotel-row {
   line-height: 1.25;
 }
 
@@ -1077,7 +1121,7 @@ th {
 
 .room-row {
   display: grid;
-  grid-template-columns: 1fr 48px;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
   border-bottom: 1px solid var(--line);
@@ -1087,14 +1131,9 @@ th {
   font-weight: 800;
 }
 
-.room-row button {
-  border: 0;
-  border-radius: 6px;
-  padding: 5px 7px;
-  background: #fff1f2;
-  color: #b91c1c;
-  font-size: 11px;
-  font-weight: 900;
+.room-row span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .agency-row {

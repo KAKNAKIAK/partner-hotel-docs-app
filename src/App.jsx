@@ -5,8 +5,10 @@ import {
   createCountry,
   createPartner,
   createRegion,
+  deleteCountry,
   deleteHotel,
   deletePartner,
+  deleteRegion,
   listCountries,
   listHotels,
   listPartners,
@@ -15,8 +17,10 @@ import {
   saveReservation,
   searchHotels,
   searchPartners,
+  updateCountry,
   updateHotel,
   updatePartner,
+  updateRegion,
 } from './api.js';
 import { hasSupabaseConfig } from './supabaseClient.js';
 
@@ -686,6 +690,63 @@ function MasterDataManager({ onClose }) {
       });
   }
 
+  function renameCountry(country) {
+    const name = window.prompt('국가명을 수정하세요.', country.name)?.trim();
+    if (!name || name === country.name) return;
+    if (countries.some((item) => item.id !== country.id && item.name === name)) {
+      setMasterState('이미 같은 국가명이 있습니다');
+      return;
+    }
+    const previousName = country.name;
+    setMasterState('국가 수정 중');
+    updateCountry({ ...country, name })
+      .then((saved) => {
+        const hotelUpdates = hotels
+          .filter((hotel) => hotel.country === previousName)
+          .map((hotel) => ({ ...hotel, country: saved.name }));
+        setCountries((current) => current.map((item) => (item.id === saved.id ? saved : item)));
+        setHotels((current) => current.map((hotel) => (
+          hotel.country === previousName ? { ...hotel, country: saved.name } : hotel
+        )));
+        setSelectedCountryId(saved.id);
+        setMasterState('국가 수정 완료');
+        return Promise.all(hotelUpdates.map(updateHotel));
+      })
+      .then((savedHotels) => {
+        if (!savedHotels?.length) return;
+        setHotels((current) => current.map((hotel) => (
+          savedHotels.find((saved) => saved.id === hotel.id) || hotel
+        )));
+      })
+      .catch((error) => {
+        console.error(error);
+        setMasterState('국가 수정 실패');
+      });
+  }
+
+  function removeCountry(country) {
+    const confirmed = window.confirm(`${country.name} 국가를 삭제할까요?\n연결된 지역도 함께 삭제됩니다.`);
+    if (!confirmed) return;
+    setMasterState('국가 삭제 중');
+    deleteCountry(country.id)
+      .then(() => {
+        const nextCountries = countries.filter((item) => item.id !== country.id);
+        const nextCountryId = nextCountries[0]?.id || '';
+        const nextRegions = regions.filter((region) => region.countryId !== country.id);
+        const nextRegionId = nextRegions.find((region) => region.countryId === nextCountryId)?.id || '';
+        setCountries(nextCountries);
+        setRegions(nextRegions);
+        setSelectedCountryId(nextCountryId);
+        setSelectedRegionId(nextRegionId);
+        setSelectedHotelId('');
+        setMasterState('국가 삭제 완료');
+      })
+      .catch((error) => {
+        console.error(error);
+        setMasterState('국가 삭제 실패');
+      });
+  }
+
   function addCity() {
     const trimmed = newCity.trim();
     if (!trimmed || !selectedCountryId) return;
@@ -706,6 +767,60 @@ function MasterDataManager({ onClose }) {
       .catch((error) => {
         console.error(error);
         setMasterState('지역 저장 실패');
+      });
+  }
+
+  function renameRegion(region) {
+    const name = window.prompt('지역명을 수정하세요.', region.name)?.trim();
+    if (!name || name === region.name) return;
+    if (regions.some((item) => item.id !== region.id && item.countryId === region.countryId && item.name === name)) {
+      setMasterState('이미 같은 지역명이 있습니다');
+      return;
+    }
+    const previousName = region.name;
+    setMasterState('지역 수정 중');
+    updateRegion({ ...region, name })
+      .then((saved) => {
+        const hotelUpdates = hotels
+          .filter((hotel) => hotel.country === selectedCountry?.name && hotel.city === previousName)
+          .map((hotel) => ({ ...hotel, city: saved.name }));
+        setRegions((current) => current.map((item) => (item.id === saved.id ? saved : item)));
+        setHotels((current) => current.map((hotel) => (
+          hotel.country === selectedCountry?.name && hotel.city === previousName ? { ...hotel, city: saved.name } : hotel
+        )));
+        setSelectedRegionId(saved.id);
+        setMasterState('지역 수정 완료');
+        return Promise.all(hotelUpdates.map(updateHotel));
+      })
+      .then((savedHotels) => {
+        if (!savedHotels?.length) return;
+        setHotels((current) => current.map((hotel) => (
+          savedHotels.find((saved) => saved.id === hotel.id) || hotel
+        )));
+      })
+      .catch((error) => {
+        console.error(error);
+        setMasterState('지역 수정 실패');
+      });
+  }
+
+  function removeRegion(region) {
+    const confirmed = window.confirm(`${region.name} 지역을 삭제할까요?`);
+    if (!confirmed) return;
+    setMasterState('지역 삭제 중');
+    deleteRegion(region.id)
+      .then(() => {
+        setRegions((current) => {
+          const next = current.filter((item) => item.id !== region.id);
+          setSelectedRegionId(next.find((item) => item.countryId === selectedCountryId)?.id || '');
+          return next;
+        });
+        setSelectedHotelId('');
+        setMasterState('지역 삭제 완료');
+      })
+      .catch((error) => {
+        console.error(error);
+        setMasterState('지역 삭제 실패');
       });
   }
 
@@ -745,16 +860,77 @@ function MasterDataManager({ onClose }) {
     setHotels((current) => current.map((hotel) => (hotel.id === selectedHotel.id ? { ...hotel, ...changes } : hotel)));
   }
 
+  function renameHotel(hotel) {
+    const koreanName = window.prompt('호텔 한글명을 수정하세요.', hotel.koreanName || hotel.name)?.trim();
+    if (koreanName === undefined || !koreanName) return;
+    const name = window.prompt('호텔 영문명을 수정하세요.', hotel.name)?.trim();
+    if (!name) return;
+    const nextHotel = { ...hotel, koreanName, name };
+    setMasterState('호텔 수정 중');
+    updateHotel(nextHotel)
+      .then((saved) => {
+        setHotels((current) => current.map((item) => (item.id === saved.id ? saved : item)));
+        setSelectedHotelId(saved.id);
+        setMasterState('호텔 수정 완료');
+      })
+      .catch((error) => {
+        console.error(error);
+        setMasterState('호텔 수정 실패');
+      });
+  }
+
   function addRoom() {
     const trimmed = newRoom.trim();
     if (!trimmed || !selectedHotel) return;
-    updateSelectedHotel({ rooms: [...rooms, trimmed] });
+    const nextHotel = { ...selectedHotel, rooms: [...rooms, trimmed] };
+    updateSelectedHotel({ rooms: nextHotel.rooms });
     setNewRoom('');
+    setMasterState('객실 저장 중');
+    updateHotel(nextHotel)
+      .then((saved) => {
+        setHotels((current) => current.map((hotel) => (hotel.id === saved.id ? saved : hotel)));
+        setMasterState('객실 저장 완료');
+      })
+      .catch((error) => {
+        console.error(error);
+        setMasterState('객실 저장 실패');
+      });
+  }
+
+  function renameRoom(index) {
+    if (!selectedHotel) return;
+    const name = window.prompt('객실명을 수정하세요.', rooms[index])?.trim();
+    if (!name || name === rooms[index]) return;
+    const nextRooms = rooms.map((room, roomIndex) => (roomIndex === index ? name : room));
+    const nextHotel = { ...selectedHotel, rooms: nextRooms };
+    updateSelectedHotel({ rooms: nextRooms });
+    setMasterState('객실 수정 중');
+    updateHotel(nextHotel)
+      .then((saved) => {
+        setHotels((current) => current.map((hotel) => (hotel.id === saved.id ? saved : hotel)));
+        setMasterState('객실 수정 완료');
+      })
+      .catch((error) => {
+        console.error(error);
+        setMasterState('객실 수정 실패');
+      });
   }
 
   function removeRoom(index) {
     if (!selectedHotel) return;
-    updateSelectedHotel({ rooms: rooms.filter((_, roomIndex) => roomIndex !== index) });
+    const nextRooms = rooms.filter((_, roomIndex) => roomIndex !== index);
+    const nextHotel = { ...selectedHotel, rooms: nextRooms };
+    updateSelectedHotel({ rooms: nextRooms });
+    setMasterState('객실 삭제 중');
+    updateHotel(nextHotel)
+      .then((saved) => {
+        setHotels((current) => current.map((hotel) => (hotel.id === saved.id ? saved : hotel)));
+        setMasterState('객실 삭제 완료');
+      })
+      .catch((error) => {
+        console.error(error);
+        setMasterState('객실 삭제 실패');
+      });
   }
 
   function addPartner() {
@@ -869,15 +1045,15 @@ function MasterDataManager({ onClose }) {
       });
   }
 
-  function deleteSelectedHotel() {
-    if (!selectedHotel) return;
-    const confirmed = window.confirm(`${selectedHotel.koreanName || selectedHotel.name} 호텔을 삭제할까요?`);
+  function deleteSelectedHotel(targetHotel = selectedHotel) {
+    if (!targetHotel) return;
+    const confirmed = window.confirm(`${targetHotel.koreanName || targetHotel.name} 호텔을 삭제할까요?`);
     if (!confirmed) return;
     setMasterState('호텔 삭제 중');
-    deleteHotel(selectedHotel.id)
+    deleteHotel(targetHotel.id)
       .then(() => {
         setHotels((current) => {
-          const next = current.filter((hotel) => hotel.id !== selectedHotel.id);
+          const next = current.filter((hotel) => hotel.id !== targetHotel.id);
           const nextHotel = next.find((hotel) => hotel.country === selectedCountry?.name && hotel.city === selectedRegion?.name) || next[0];
           const nextCountry = countries.find((country) => country.name === nextHotel?.country);
           const nextRegion = regions.find((region) => region.countryId === nextCountry?.id && region.name === nextHotel?.city);
@@ -1009,6 +1185,8 @@ function MasterDataManager({ onClose }) {
               inputPlaceholder="국가 추가"
               onInput={setNewCountry}
               onAdd={addCountry}
+              onRename={renameCountry}
+              onDelete={removeCountry}
             />
             <MasterColumn
               title="지역"
@@ -1024,20 +1202,26 @@ function MasterDataManager({ onClose }) {
               inputPlaceholder="지역 추가"
               onInput={setNewCity}
               onAdd={addCity}
+              onRename={renameRegion}
+              onDelete={removeRegion}
             />
             <div className="master-card hotel-list-card">
               <header>호텔</header>
               <div className="hotel-list">
                 {visibleHotels.map((hotel) => (
-                  <button
+                  <div
                     key={hotel.id}
-                    type="button"
-                    className={selectedHotel?.id === hotel.id ? 'active' : ''}
-                    onClick={() => setSelectedHotelId(hotel.id)}
+                    className={`master-row hotel-row ${selectedHotel?.id === hotel.id ? 'active' : ''}`}
                   >
-                    <strong>{hotel.name}</strong>
-                    <span>{hotel.koreanName || hotel.name}</span>
-                  </button>
+                    <button type="button" className="master-row-main" onClick={() => setSelectedHotelId(hotel.id)}>
+                      <strong>{hotel.name}</strong>
+                      <span>{hotel.koreanName || hotel.name}</span>
+                    </button>
+                    <div className="master-row-actions">
+                      <button type="button" onClick={() => renameHotel(hotel)}>수정</button>
+                      <button type="button" className="danger" onClick={() => deleteSelectedHotel(hotel)}>삭제</button>
+                    </div>
+                  </div>
                 ))}
               </div>
               <footer className="hotel-add">
@@ -1094,7 +1278,10 @@ function MasterDataManager({ onClose }) {
                   {rooms.map((room, index) => (
                     <div className="room-row" key={`${room}-${index}`}>
                       <span>{room}</span>
-                      <button type="button" onClick={() => removeRoom(index)}>삭제</button>
+                      <div className="room-actions">
+                        <button type="button" onClick={() => renameRoom(index)}>수정</button>
+                        <button type="button" className="danger" onClick={() => removeRoom(index)}>삭제</button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1120,6 +1307,8 @@ function MasterColumn({
   inputPlaceholder,
   onInput,
   onAdd,
+  onRename,
+  onDelete,
   getKey = (item) => item,
   getLabel = (item) => item,
 }) {
@@ -1128,14 +1317,18 @@ function MasterColumn({
       <header>{title}</header>
       <div className="master-list">
         {items.map((item) => (
-          <button
+          <div
             key={getKey(item)}
-            type="button"
-            className={active === getKey(item) ? 'active' : ''}
-            onClick={() => onSelect(item)}
+            className={`master-row ${active === getKey(item) ? 'active' : ''}`}
           >
-            {getLabel(item)}
-          </button>
+            <button type="button" className="master-row-main" onClick={() => onSelect(item)}>
+              {getLabel(item)}
+            </button>
+            <div className="master-row-actions">
+              {onRename && <button type="button" onClick={() => onRename(item)}>수정</button>}
+              {onDelete && <button type="button" className="danger" onClick={() => onDelete(item)}>삭제</button>}
+            </div>
+          </div>
         ))}
       </div>
       <footer>

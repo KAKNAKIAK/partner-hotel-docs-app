@@ -60,6 +60,25 @@ export async function createCountry(name) {
   return countryFromRow(data[0]);
 }
 
+export async function updateCountry(country) {
+  const data = await supabaseFetch(`countries?id=eq.${country.id}&select=*`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      name: country.name,
+      updated_at: new Date().toISOString(),
+    }),
+  });
+  return countryFromRow(data[0]);
+}
+
+export async function deleteCountry(id) {
+  await supabaseFetch(`countries?id=eq.${id}`, {
+    method: 'DELETE',
+    headers: { Prefer: 'return=minimal' },
+  });
+  return id;
+}
+
 export async function listRegions() {
   const data = await supabaseFetch('regions?select=*,countries(name)&order=name.asc');
   return data.map((item) => regionFromRow({
@@ -77,6 +96,28 @@ export async function createRegion(countryId, name) {
     ...data[0],
     country_name: data[0]?.countries?.name || '',
   });
+}
+
+export async function updateRegion(region) {
+  const data = await supabaseFetch(`regions?id=eq.${region.id}&select=*,countries(name)`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      name: region.name,
+      updated_at: new Date().toISOString(),
+    }),
+  });
+  return regionFromRow({
+    ...data[0],
+    country_name: data[0]?.countries?.name || '',
+  });
+}
+
+export async function deleteRegion(id) {
+  await supabaseFetch(`regions?id=eq.${id}`, {
+    method: 'DELETE',
+    headers: { Prefer: 'return=minimal' },
+  });
+  return id;
 }
 
 export async function listPartners() {
