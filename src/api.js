@@ -50,6 +50,7 @@ function regionFromRow(item) {
 function companyInfoFromRow(item = {}) {
   return {
     id: item.id || 'default',
+    name: item.name || '',
     ciUrl: item.ci_url || '',
     address: item.address || '',
     phone: item.phone || '',
@@ -62,6 +63,7 @@ function companyInfoFromRow(item = {}) {
 function companyInfoToRow(companyInfo) {
   return {
     id: companyInfo.id || 'default',
+    name: companyInfo.name || null,
     ci_url: companyInfo.ciUrl || null,
     address: companyInfo.address || null,
     phone: companyInfo.phone || null,

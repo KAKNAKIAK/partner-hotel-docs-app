@@ -59,6 +59,7 @@ function applyRounding(value, mode) {
 function emptyCompanyInfo() {
   return {
     id: 'default',
+    name: '',
     ciUrl: '',
     address: '',
     phone: '',
@@ -1235,9 +1236,16 @@ function MasterDataManager({ onClose }) {
                   <span>
                     {companyInfo.ciUrl ? <img src={companyInfo.ciUrl} alt="" /> : 'CI'}
                   </span>
-                  <strong>업체 정보</strong>
+                  <strong>{companyInfo.name || '업체 정보'}</strong>
                 </button>
               </div>
+              <footer className="company-name-edit">
+                <input
+                  value={companyInfo.name}
+                  onChange={(event) => updateCompanyInfo({ name: event.target.value })}
+                  placeholder="업체 이름"
+                />
+              </footer>
             </div>
 
             <div className="master-card company-info-card">

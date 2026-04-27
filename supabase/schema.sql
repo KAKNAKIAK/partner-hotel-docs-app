@@ -24,6 +24,7 @@ create table if not exists public.regions (
 
 create table if not exists public.company_settings (
   id text primary key default 'default',
+  name text,
   ci_url text,
   address text,
   phone text,
@@ -91,6 +92,7 @@ alter table public.reservations enable row level security;
 
 alter table public.partners add column if not exists ci_url text;
 alter table public.company_settings add column if not exists ci_url text;
+alter table public.company_settings add column if not exists name text;
 alter table public.company_settings add column if not exists address text;
 alter table public.company_settings add column if not exists phone text;
 alter table public.company_settings add column if not exists email text;
