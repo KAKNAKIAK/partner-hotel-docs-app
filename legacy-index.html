@@ -1,0 +1,1596 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>거래처 인보이스·호텔 확정서 통합 작성기</title>
+  <style>
+    :root {
+      --app-bg: #edf1f6;
+      --surface: #ffffff;
+      --surface-soft: #f7f9fc;
+      --ink: #172033;
+      --muted: #667084;
+      --line: #d9e0ea;
+      --line-strong: #aeb8c8;
+      --navy: #1e293b;
+      --blue: #2563eb;
+      --blue-soft: #eff6ff;
+      --teal: #0f766e;
+      --teal-soft: #ecfdf5;
+      --amber: #b45309;
+      --amber-soft: #fff7ed;
+      --red: #b42318;
+      --red-soft: #fff1f2;
+      --shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--app-bg);
+      color: var(--ink);
+      letter-spacing: 0;
+      overflow-x: hidden;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button { cursor: pointer; }
+
+    .app-topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      min-height: 68px;
+      padding: 12px 22px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(14px);
+    }
+
+    .brand {
+      min-width: 240px;
+    }
+
+    .brand-kicker {
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    .brand-title {
+      margin: 2px 0 0;
+      font-size: 19px;
+      line-height: 1.25;
+    }
+
+    .top-summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(110px, 1fr));
+      gap: 8px;
+      flex: 1;
+      max-width: 780px;
+    }
+
+    .summary-pill {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: var(--surface-soft);
+    }
+
+    .summary-pill span {
+      display: block;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 900;
+    }
+
+    .summary-pill strong {
+      display: block;
+      overflow: hidden;
+      margin-top: 2px;
+      color: var(--ink);
+      font-size: 12px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+      min-width: 0;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 12px;
+      background: #fff;
+      color: var(--navy);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .btn:hover { border-color: var(--line-strong); background: #f8fafc; }
+
+    .btn-primary {
+      border-color: var(--navy);
+      background: var(--navy);
+      color: #fff;
+    }
+
+    .btn-primary:hover { background: #111827; }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: minmax(420px, 480px) minmax(0, 1fr) minmax(260px, 286px);
+      gap: 12px;
+      max-width: 1720px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .form-panel {
+      overflow: hidden;
+      align-self: start;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 13px 15px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfe;
+    }
+
+    .panel-header h2 {
+      margin: 0;
+      font-size: 14px;
+    }
+
+    .status-chip {
+      border-radius: 999px;
+      padding: 4px 9px;
+      background: var(--amber-soft);
+      color: var(--amber);
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .form-scroll {
+      max-height: calc(100vh - 102px);
+      overflow: auto;
+    }
+
+    .work-step {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 10px;
+      padding: 16px 15px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .step-index {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      background: var(--blue-soft);
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .step-title {
+      margin: 0 0 10px;
+      color: var(--navy);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .step-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .step-title-row .step-title {
+      margin: 0;
+    }
+
+    .field-note {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1.45;
+    }
+
+    .calc-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 8px 10px;
+      background: var(--blue-soft);
+    }
+
+    .calc-card span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .calc-card strong {
+      color: var(--blue);
+      font-size: 16px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .compact-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .btn-small {
+      min-height: 30px;
+      border-radius: 7px;
+      padding: 5px 9px;
+      font-size: 12px;
+    }
+
+    .default-box {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface-soft);
+      padding: 10px;
+    }
+
+    .default-box summary {
+      cursor: pointer;
+      color: var(--navy);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .default-box .grid {
+      margin-top: 10px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-charge { grid-template-columns: minmax(130px, 1.5fr) 88px 66px 66px 36px; }
+    .span-2 { grid-column: span 2; }
+    .span-3 { grid-column: span 3; }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    label {
+      color: #475569;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid #cbd5e1;
+      border-radius: 7px;
+      padding: 8px 10px;
+      background: #fff;
+      color: var(--ink);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+    }
+
+    textarea {
+      min-height: 78px;
+      resize: vertical;
+      line-height: 1.55;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px #2563eb;
+    }
+
+    .field-error {
+      min-height: 14px;
+      color: var(--red);
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .charge-row {
+      align-items: end;
+      margin-bottom: 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px;
+      background: var(--surface-soft);
+    }
+
+    .icon-btn {
+      width: 36px;
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      color: #64748b;
+      font-size: 19px;
+      font-weight: 900;
+    }
+
+    .icon-btn:hover {
+      border-color: #fecaca;
+      background: var(--red-soft);
+      color: var(--red);
+    }
+
+    .preview-panel {
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .tab {
+      min-height: 36px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 7px 12px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .tab.active {
+      border-color: var(--blue);
+      background: var(--blue);
+      color: #fff;
+    }
+
+    .preview-hint {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .preview-canvas {
+      overflow: auto;
+      max-height: calc(100vh - 122px);
+      padding: 20px;
+      background: #dfe6ef;
+    }
+
+    .document-fit {
+      width: 794px;
+      margin: 0 auto;
+      zoom: var(--preview-scale, 1);
+    }
+
+    .document {
+      width: 794px;
+      min-height: 1123px;
+      margin: 0 auto;
+      padding: 44px;
+      background: #fff;
+      color: #111827;
+      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.16);
+    }
+
+    .doc-kicker {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+
+    .doc-title {
+      margin: 7px 0 0;
+      font-size: 31px;
+      line-height: 1.15;
+    }
+
+    .doc-rule {
+      height: 2px;
+      margin: 20px 0 24px;
+      background: var(--navy);
+    }
+
+    .doc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 18px 0;
+    }
+
+    .doc-box {
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 11px 12px;
+    }
+
+    .doc-label {
+      margin: 0 0 4px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .doc-value {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.45;
+    }
+
+    .doc-hotel-name {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.25;
+    }
+
+    .doc-meta {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 22px;
+      font-size: 12px;
+    }
+
+    th,
+    td {
+      border: 1px solid #b8c2d0;
+      padding: 8px;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    th {
+      background: var(--navy);
+      color: #fff;
+      font-weight: 900;
+    }
+
+    .num {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .summary {
+      width: 340px;
+      margin: 22px 0 0 auto;
+      border: 1px solid #b8c2d0;
+      font-size: 13px;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 11px;
+      border-bottom: 1px solid #b8c2d0;
+    }
+
+    .summary-row:last-child { border-bottom: 0; }
+
+    .summary-total {
+      background: var(--navy);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 900;
+    }
+
+    .notice-box {
+      margin-top: 22px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 14px;
+      background: var(--surface-soft);
+      font-size: 13px;
+      line-height: 1.65;
+      white-space: pre-wrap;
+    }
+
+    .confirm-hero {
+      margin-top: 18px;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 18px;
+      background: var(--blue-soft);
+    }
+
+    .confirm-no {
+      margin: 4px 0 0;
+      color: #1e3a8a;
+      font-family: Consolas, monospace;
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+    }
+
+    .audit-list {
+      margin: 20px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .audit-list li {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      border-bottom: 1px solid var(--line);
+      padding: 10px 0;
+      font-size: 14px;
+    }
+
+    .audit-list strong { color: var(--navy); }
+
+    .side-panel {
+      position: sticky;
+      top: 84px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-self: start;
+    }
+
+    .side-body {
+      padding: 14px;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: var(--surface-soft);
+    }
+
+    .metric-label {
+      margin: 0;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 900;
+    }
+
+    .metric-value {
+      margin: 2px 0 0;
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .metric-wide {
+      grid-column: span 2;
+      background: var(--navy);
+      color: #fff;
+    }
+
+    .checklist {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin-top: 12px;
+    }
+
+    .warning,
+    .ok {
+      border-radius: 8px;
+      padding: 9px 10px;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.45;
+    }
+
+    .warning {
+      border: 1px solid #fed7aa;
+      background: var(--amber-soft);
+      color: #9a3412;
+    }
+
+    .ok {
+      border: 1px solid #99f6e4;
+      background: var(--teal-soft);
+      color: #115e59;
+    }
+
+    .quick-note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 1380px) {
+      .app-shell {
+        grid-template-columns: minmax(400px, 500px) minmax(0, 1fr);
+      }
+
+      .side-panel {
+        position: static;
+        grid-column: 1 / -1;
+      }
+    }
+
+    @media (max-width: 920px) {
+      .app-topbar {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .top-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        max-width: none;
+      }
+
+      .toolbar {
+        justify-content: flex-start;
+      }
+
+      .app-shell {
+        grid-template-columns: 1fr;
+        padding: 10px;
+      }
+
+      .form-scroll,
+      .preview-canvas {
+        max-height: none;
+      }
+
+      .grid-2,
+      .grid-3,
+      .grid-charge {
+        grid-template-columns: 1fr;
+      }
+
+      .span-2,
+      .span-3 {
+        grid-column: auto;
+      }
+
+      .document {
+        width: 100%;
+        min-height: auto;
+        padding: 24px;
+      }
+
+      .document-fit {
+        width: 100%;
+        zoom: 1 !important;
+      }
+
+      .doc-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .app-topbar {
+        gap: 14px;
+        padding: 14px 10px;
+      }
+
+      .brand {
+        min-width: 0;
+      }
+
+      .top-summary {
+        grid-template-columns: 1fr;
+      }
+
+      .toolbar {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .btn {
+        width: 100%;
+        padding-inline: 8px;
+      }
+
+      .preview-header {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .tabs {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+
+      .preview-canvas {
+        padding: 12px;
+      }
+    }
+
+    @media print {
+      body { background: #fff; }
+
+      .app-topbar,
+      .form-panel,
+      .preview-header,
+      .side-panel {
+        display: none !important;
+      }
+
+      .app-shell {
+        display: block;
+        padding: 0;
+      }
+
+      .panel {
+        border: 0;
+        box-shadow: none;
+      }
+
+      .preview-canvas {
+        max-height: none;
+        overflow: visible;
+        padding: 0;
+        background: #fff;
+      }
+
+      .document-fit {
+        width: auto;
+        margin: 0;
+        zoom: 1 !important;
+      }
+
+      .document {
+        width: auto;
+        min-height: auto;
+        box-shadow: none;
+        page-break-after: always;
+      }
+
+      @page {
+        size: A4;
+        margin: 12mm;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-topbar">
+    <div class="brand">
+      <div class="brand-kicker">Partner Hotel Docs</div>
+      <h1 class="brand-title">거래처 인보이스·호텔 확정서 작성</h1>
+    </div>
+
+    <div class="top-summary" aria-label="예약 요약">
+      <div class="summary-pill"><span>예약명</span><strong id="topGuest">-</strong></div>
+      <div class="summary-pill"><span>투숙일</span><strong id="topStay">-</strong></div>
+      <div class="summary-pill"><span>청구액</span><strong id="topAmount">-</strong></div>
+      <div class="summary-pill"><span>검수</span><strong id="topReview">-</strong></div>
+    </div>
+
+    <div class="toolbar">
+      <button class="btn" id="resetSampleBtn" type="button" title="샘플 데이터로 되돌립니다.">샘플 복원</button>
+      <button class="btn" id="saveDraftBtn" type="button" title="현재 입력값을 브라우저에 저장합니다.">임시 저장</button>
+      <button class="btn" id="loadDraftBtn" type="button" title="브라우저에 저장한 입력값을 불러옵니다.">불러오기</button>
+      <button class="btn btn-primary" id="printBtn" type="button" title="현재 선택된 문서를 인쇄하거나 PDF로 저장합니다.">인쇄 / PDF</button>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <section class="panel form-panel">
+      <div class="panel-header">
+        <h2>예약 원본 입력</h2>
+        <span class="status-chip" id="statusChip">검수필요</span>
+      </div>
+
+      <div class="form-scroll">
+        <section class="work-step">
+          <div class="step-index">1</div>
+          <div>
+            <h3 class="step-title">예약 기본</h3>
+            <div class="grid grid-2">
+              <div class="field">
+                <label for="leadGuest">예약명</label>
+                <input id="leadGuest" data-field="leadGuest" />
+              </div>
+              <div class="field">
+                <label for="partnerName">수신 거래처</label>
+                <input id="partnerName" data-field="partnerName" />
+              </div>
+              <div class="field">
+                <label for="issueDate">작성일</label>
+                <input id="issueDate" data-field="issueDate" data-date-label="작성일" />
+                <div class="field-error" id="issueDateError"></div>
+              </div>
+              <div class="field">
+                <label for="status">상태</label>
+                <select id="status" data-field="status">
+                  <option value="작성중">작성중</option>
+                  <option value="검수필요">검수필요</option>
+                  <option value="확정완료">확정완료</option>
+                  <option value="송금요청">송금요청</option>
+                  <option value="입금완료">입금완료</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="confirmNo">확정번호</label>
+                <input id="confirmNo" data-field="confirmNo" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="work-step">
+          <div class="step-index">2</div>
+          <div>
+            <h3 class="step-title">호텔·일정</h3>
+            <div class="grid grid-2">
+              <div class="field span-2">
+                <label for="hotelName">호텔명</label>
+                <input id="hotelName" data-field="hotelName" />
+              </div>
+              <div class="field">
+                <label for="roomType">객실 타입</label>
+                <input id="roomType" data-field="roomType" />
+              </div>
+              <div class="field">
+                <label for="roomCount">객실 수</label>
+                <input id="roomCount" type="number" data-field="roomCount" />
+              </div>
+              <div class="field">
+                <label for="checkIn">체크인</label>
+                <input id="checkIn" data-field="checkIn" data-date-label="체크인" />
+                <div class="field-error" id="checkInError"></div>
+              </div>
+              <div class="field">
+                <label for="checkOut">체크아웃</label>
+                <input id="checkOut" data-field="checkOut" data-date-label="체크아웃" />
+                <div class="field-error" id="checkOutError"></div>
+              </div>
+              <div class="field">
+                <label>자동 계산 박수</label>
+                <div class="calc-card"><span>체크인·체크아웃 기준</span><strong id="autoNightsValue">0박</strong></div>
+              </div>
+              <div class="field">
+                <label for="statedNights">문서 표시 박수</label>
+                <input id="statedNights" type="number" data-field="statedNights" />
+                <button class="btn btn-small" id="syncNightsBtn" type="button">자동 박수 반영</button>
+                <p class="field-note" id="nightsModeNote">일정 입력 시 자동 반영됩니다.</p>
+              </div>
+              <div class="field span-2">
+                <label for="lateCheckout">레이트 체크아웃</label>
+                <input id="lateCheckout" data-field="lateCheckout" />
+              </div>
+              <div class="field span-2">
+                <label for="hotelAddress">호텔 주소</label>
+                <input id="hotelAddress" data-field="hotelAddress" />
+              </div>
+              <div class="field span-2">
+                <label for="hotelPhone">호텔 전화</label>
+                <input id="hotelPhone" data-field="hotelPhone" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="work-step">
+          <div class="step-index">3</div>
+          <div>
+            <h3 class="step-title">인원·고객 안내 조건</h3>
+            <div class="grid grid-3">
+              <div class="field">
+                <label for="adultCount">성인</label>
+                <input id="adultCount" type="number" data-field="adultCount" />
+              </div>
+              <div class="field">
+                <label for="childCount">아동</label>
+                <input id="childCount" type="number" data-field="childCount" />
+              </div>
+              <div class="field">
+                <label for="infantCount">유아</label>
+                <input id="infantCount" type="number" data-field="infantCount" />
+              </div>
+              <div class="field span-3">
+                <label for="mealPlan">식사 조건</label>
+                <input id="mealPlan" data-field="mealPlan" />
+              </div>
+              <div class="field span-3">
+                <label for="paymentTerms">결제 조건</label>
+                <input id="paymentTerms" data-field="paymentTerms" />
+              </div>
+              <div class="field span-3">
+                <label for="customerNotice">호텔 확정서 안내사항</label>
+                <textarea id="customerNotice" data-field="customerNotice"></textarea>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="work-step">
+          <div class="step-index">4</div>
+          <div>
+            <div class="step-title-row">
+              <h3 class="step-title" style="margin:0;">거래처 정산 라인</h3>
+              <div class="compact-actions">
+                <button class="btn btn-small" type="button" data-charge-template="room">객실</button>
+                <button class="btn btn-small" type="button" data-charge-template="late">레이트</button>
+                <button class="btn btn-small" type="button" data-charge-template="breakfast">조식</button>
+                <button class="btn btn-small" id="addChargeBtn" type="button">기타</button>
+              </div>
+            </div>
+            <div id="chargeRows"></div>
+          </div>
+        </section>
+
+        <section class="work-step">
+          <div class="step-index">5</div>
+          <div>
+            <h3 class="step-title">정산·출력 기본값</h3>
+            <div class="grid grid-3">
+              <div class="field">
+                <label for="currency">통화</label>
+                <input id="currency" data-field="currency" />
+              </div>
+              <div class="field">
+                <label for="exchangeRate">환율</label>
+                <input id="exchangeRate" type="number" data-field="exchangeRate" />
+              </div>
+              <div class="field">
+                <label for="exchangeRateDate">환율 기준일</label>
+                <input id="exchangeRateDate" data-field="exchangeRateDate" data-date-label="환율 기준일" />
+                <div class="field-error" id="exchangeRateDateError"></div>
+              </div>
+              <div class="field span-3">
+                <label for="rounding">원화 처리</label>
+                <select id="rounding" data-field="rounding">
+                  <option value="round">반올림</option>
+                  <option value="floor">절사</option>
+                  <option value="ceil">올림</option>
+                </select>
+              </div>
+              <details class="default-box span-3">
+                <summary>발신·계좌·문구 기본값 확인</summary>
+                <div class="grid grid-2">
+                  <div class="field span-2">
+                    <label for="senderName">발신</label>
+                    <input id="senderName" data-field="senderName" />
+                  </div>
+                  <div class="field span-2">
+                    <label for="bankAccount">입금 계좌</label>
+                    <input id="bankAccount" data-field="bankAccount" />
+                  </div>
+                  <div class="field span-2">
+                    <label for="invoiceRemark">거래처 인보이스 문구</label>
+                    <textarea id="invoiceRemark" data-field="invoiceRemark"></textarea>
+                  </div>
+                </div>
+              </details>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="panel preview-panel">
+      <div class="preview-header">
+        <div class="tabs" role="tablist" aria-label="문서 미리보기 선택">
+          <button class="tab active" type="button" role="tab" aria-selected="true" data-tab="invoice">거래처 인보이스</button>
+          <button class="tab" type="button" role="tab" aria-selected="false" data-tab="confirmation">호텔 확정서</button>
+          <button class="tab" type="button" role="tab" aria-selected="false" data-tab="audit">검수표</button>
+        </div>
+        <div class="preview-hint" id="previewHint">거래처 송금 요청용</div>
+      </div>
+      <div class="preview-canvas" id="preview"></div>
+    </section>
+
+    <aside class="side-panel">
+      <section class="panel">
+        <div class="panel-header">
+          <h2>실시간 검수</h2>
+          <span class="status-chip" id="reviewCount">0건</span>
+        </div>
+        <div class="side-body">
+          <div class="metric-grid">
+            <div class="metric">
+              <p class="metric-label">자동 박수</p>
+              <p class="metric-value" id="metricNights">0박</p>
+            </div>
+            <div class="metric">
+              <p class="metric-label">외화 합계</p>
+              <p class="metric-value" id="metricForeign">USD 0</p>
+            </div>
+            <div class="metric metric-wide">
+              <p class="metric-label">원화 청구액</p>
+              <p class="metric-value" id="metricKrw">0원</p>
+            </div>
+          </div>
+          <div class="checklist" id="warnings"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>사용 흐름</h2>
+        </div>
+        <div class="side-body">
+          <p class="quick-note">
+            한 예약을 기준으로 입력하면 거래처 인보이스와 호텔 확정서가 동시에 바뀝니다.
+            금액·환율·계좌는 고객용 확정서에 노출되지 않도록 분리했습니다.
+          </p>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <script>
+    const STORAGE_KEY = 'partnerHotelDocsDraftV2';
+
+    function makeId() {
+      return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+
+    const sample = {
+      partnerName: '내일 투어',
+      senderName: '에이앤드티 / 권혜원 상무, 김영애 부장',
+      issueDate: '2026-03-06',
+      leadGuest: 'LEE ANNA 외 5인',
+      confirmNo: '113771',
+      status: '검수필요',
+      hotelName: 'Villa Le Corail - A Gran Melia Hotel Nha Trang',
+      hotelAddress: 'Bai Tien, Duong De, Vinh Hoa Ward, Nha Trang City, Khanh Hoa Province, Vietnam 65000',
+      hotelPhone: '+84-258-386-8888',
+      roomType: 'LUSH VILLA 3 BED',
+      checkIn: '2026-04-03',
+      checkOut: '2026-04-06',
+      statedNights: 3,
+      roomCount: 1,
+      lateCheckout: '2026-04-06 18:00',
+      adultCount: 5,
+      childCount: 1,
+      infantCount: 0,
+      mealPlan: 'Breakfast included',
+      paymentTerms: 'Room payment will be charged in agent',
+      currency: 'USD',
+      exchangeRate: 1494.6,
+      exchangeRateDate: '2026-03-06',
+      rounding: 'round',
+      bankAccount: '국민은행 806401-00-080724 / 예금주: 주식회사에이앤드티',
+      invoiceRemark: '상기 금액을 청구하오니 확인 후 입금을 부탁드립니다.',
+      customerNotice: '체크인 시 투숙객 전원의 여권을 제출해 주세요.\n호텔에서 보증금 또는 현장 추가비를 요청할 수 있습니다.\n미니바, 룸서비스, 전화, 세탁 등 개인 이용 금액은 현장에서 직접 결제합니다.',
+      charges: [
+        { id: makeId(), label: '객실 요금', unitPrice: 525, quantity: 1, nights: 3 },
+        { id: makeId(), label: '레이트 체크아웃', unitPrice: 262.5, quantity: 1, nights: 1 },
+        { id: makeId(), label: '성인 조식 추가 비용', unitPrice: 25, quantity: 5, nights: 1 },
+      ],
+    };
+
+    let state = structuredClone(sample);
+    let activeTab = 'invoice';
+    let nightsManuallyEdited = false;
+
+    function normalizeDateInput(value, label) {
+      const raw = String(value || '').trim();
+      if (!raw) return '';
+
+      let normalized = '';
+      if (/^\d{8}$/.test(raw)) {
+        normalized = `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`;
+      } else if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+        normalized = raw;
+      } else {
+        throw new Error(`${label}은 YYYYMMDD 또는 YYYY-MM-DD 형식으로 입력해 주세요.`);
+      }
+
+      const [year, month, day] = normalized.split('-').map(Number);
+      const date = new Date(Date.UTC(year, month - 1, day));
+      if (
+        date.getUTCFullYear() !== year ||
+        date.getUTCMonth() + 1 !== month ||
+        date.getUTCDate() !== day
+      ) {
+        throw new Error(`${label}이 올바른 날짜가 아닙니다.`);
+      }
+
+      return normalized;
+    }
+
+    function calcNights(checkIn, checkOut) {
+      if (!checkIn || !checkOut) return 0;
+      const start = new Date(`${checkIn}T00:00:00Z`).getTime();
+      const end = new Date(`${checkOut}T00:00:00Z`).getTime();
+      if (!Number.isFinite(start) || !Number.isFinite(end)) return 0;
+      return Math.max(0, Math.round((end - start) / 86400000));
+    }
+
+    function syncNightsToDates(force = false) {
+      const autoNights = calcNights(state.checkIn, state.checkOut);
+      if (!autoNights) return;
+      if (force || !nightsManuallyEdited) {
+        state.statedNights = autoNights;
+        nightsManuallyEdited = false;
+      }
+    }
+
+    function lineTotal(line) {
+      return Number(line.unitPrice || 0) * Number(line.quantity || 0) * Number(line.nights || 0);
+    }
+
+    function chargeTemplate(type) {
+      const autoNights = calcNights(state.checkIn, state.checkOut) || Number(state.statedNights || 1) || 1;
+      const roomCount = Number(state.roomCount || 1) || 1;
+      const adultCount = Number(state.adultCount || 1) || 1;
+
+      const templates = {
+        room: { label: '객실 요금', unitPrice: 0, quantity: roomCount, nights: autoNights },
+        late: { label: '레이트 체크아웃', unitPrice: 0, quantity: roomCount, nights: 1 },
+        breakfast: { label: '조식 추가 비용', unitPrice: 0, quantity: adultCount, nights: 1 },
+        custom: { label: '추가 요금', unitPrice: 0, quantity: 1, nights: 1 },
+      };
+
+      return { id: makeId(), ...(templates[type] || templates.custom) };
+    }
+
+    function foreignTotal() {
+      return state.charges.reduce((sum, line) => sum + lineTotal(line), 0);
+    }
+
+    function applyRounding(value) {
+      if (state.rounding === 'floor') return Math.floor(value);
+      if (state.rounding === 'ceil') return Math.ceil(value);
+      return Math.round(value);
+    }
+
+    function krwTotal() {
+      return applyRounding(foreignTotal() * Number(state.exchangeRate || 0));
+    }
+
+    function money(value, currency = state.currency || 'USD') {
+      return `${currency} ${Number(value || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+    }
+
+    function krw(value) {
+      return `${Number(value || 0).toLocaleString('ko-KR')}원`;
+    }
+
+    function esc(value) {
+      return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function collectWarnings() {
+      const warnings = [];
+      const autoNights = calcNights(state.checkIn, state.checkOut);
+      if (autoNights !== Number(state.statedNights || 0)) {
+        warnings.push(`체크인/체크아웃 기준 ${autoNights}박인데 문서 표시 박수는 ${state.statedNights}박입니다.`);
+      }
+      if (!String(state.confirmNo || '').trim()) warnings.push('호텔 확정번호가 비어 있습니다.');
+      if (!String(state.exchangeRateDate || '').trim()) warnings.push('환율 기준일이 비어 있습니다.');
+      if (String(state.mealPlan || '').toLowerCase().includes('breakfast included') && state.charges.some((line) => String(line.label).includes('조식'))) {
+        warnings.push('조식 포함 조건인데 조식 추가 비용 라인이 있습니다.');
+      }
+      if (String(state.lateCheckout || '').trim() && !state.charges.some((line) => String(line.label).includes('레이트'))) {
+        warnings.push('레이트 체크아웃 시간이 있지만 레이트 체크아웃 요금 라인이 없습니다.');
+      }
+      if ((Number(state.adultCount || 0) + Number(state.childCount || 0) + Number(state.infantCount || 0)) <= 0) {
+        warnings.push('투숙 인원이 0명입니다.');
+      }
+      return warnings;
+    }
+
+    function renderChargeRows() {
+      const wrap = document.getElementById('chargeRows');
+      wrap.innerHTML = state.charges.map((line) => `
+        <div class="grid grid-charge charge-row" data-charge-id="${esc(line.id)}">
+          <div class="field">
+            <label for="charge-label-${esc(line.id)}">항목</label>
+            <input id="charge-label-${esc(line.id)}" value="${esc(line.label)}" data-charge-field="label" />
+          </div>
+          <div class="field">
+            <label for="charge-unit-${esc(line.id)}">단가</label>
+            <input id="charge-unit-${esc(line.id)}" type="number" value="${esc(line.unitPrice)}" data-charge-field="unitPrice" />
+          </div>
+          <div class="field">
+            <label for="charge-qty-${esc(line.id)}">수량</label>
+            <input id="charge-qty-${esc(line.id)}" type="number" value="${esc(line.quantity)}" data-charge-field="quantity" />
+          </div>
+          <div class="field">
+            <label for="charge-night-${esc(line.id)}">박수</label>
+            <input id="charge-night-${esc(line.id)}" type="number" value="${esc(line.nights)}" data-charge-field="nights" />
+          </div>
+          <button class="icon-btn" type="button" data-remove-charge="${esc(line.id)}" aria-label="요금 라인 삭제">×</button>
+        </div>
+      `).join('');
+
+      wrap.querySelectorAll('[data-charge-field]').forEach((input) => {
+        const row = input.closest('[data-charge-id]');
+        const id = row.dataset.chargeId;
+        const key = input.dataset.chargeField;
+        input.addEventListener('input', () => {
+          const line = state.charges.find((item) => item.id === id);
+          if (!line) return;
+          line[key] = input.type === 'number' ? Number(input.value || 0) : input.value;
+          renderAll({ skipChargeRows: true });
+        });
+      });
+
+      wrap.querySelectorAll('input[type="number"]').forEach(enableClickFocusSelect);
+      wrap.querySelectorAll('[data-remove-charge]').forEach((button) => {
+        button.addEventListener('click', () => {
+          state.charges = state.charges.filter((line) => line.id !== button.dataset.removeCharge);
+          renderAll();
+        });
+      });
+    }
+
+    function invoiceHtml() {
+      const rows = state.charges.map((line) => `
+        <tr>
+          <td>${esc(line.label)}</td>
+          <td class="num">${money(line.unitPrice)}</td>
+          <td class="num">${esc(line.quantity)}</td>
+          <td class="num">${esc(line.nights)}</td>
+          <td class="num"><strong>${money(lineTotal(line))}</strong></td>
+        </tr>
+      `).join('');
+
+      return `
+        <article class="document">
+          <div class="doc-kicker">Payment Request</div>
+          <h2 class="doc-title">INVOICE</h2>
+          <div class="doc-rule"></div>
+
+          <div class="doc-grid">
+            <div class="doc-box"><p class="doc-label">수신</p><p class="doc-value">${esc(state.partnerName)}</p></div>
+            <div class="doc-box"><p class="doc-label">발신 / 작성일</p><p class="doc-value">${esc(state.senderName)}<br>${esc(state.issueDate)}</p></div>
+            <div class="doc-box"><p class="doc-label">예약명</p><p class="doc-value">${esc(state.leadGuest)}</p></div>
+            <div class="doc-box"><p class="doc-label">호텔</p><p class="doc-value">${esc(state.hotelName)}</p></div>
+            <div class="doc-box"><p class="doc-label">투숙일</p><p class="doc-value">${esc(state.checkIn)} - ${esc(state.checkOut)} / ${esc(state.statedNights)}박</p></div>
+            <div class="doc-box"><p class="doc-label">객실</p><p class="doc-value">${esc(state.roomType)} / ${esc(state.roomCount)}실</p></div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>항목</th>
+                <th class="num">단가</th>
+                <th class="num">수량</th>
+                <th class="num">박수</th>
+                <th class="num">합계</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+
+          <div class="summary">
+            <div class="summary-row"><strong>총입금액(${esc(state.currency)})</strong><span>${money(foreignTotal())}</span></div>
+            <div class="summary-row"><strong>적용환율</strong><span>${Number(state.exchangeRate || 0).toLocaleString('ko-KR')} / ${esc(state.exchangeRateDate)}</span></div>
+            <div class="summary-row summary-total"><strong>총입금액(원화)</strong><span>${krw(krwTotal())}</span></div>
+          </div>
+
+          <div class="notice-box"><strong>입금 계좌</strong><br>${esc(state.bankAccount)}<br><br>${esc(state.invoiceRemark)}</div>
+        </article>
+      `;
+    }
+
+    function confirmationHtml() {
+      const pax = [
+        Number(state.adultCount || 0) ? `ADT ${state.adultCount}` : '',
+        Number(state.childCount || 0) ? `CHD ${state.childCount}` : '',
+        Number(state.infantCount || 0) ? `INF ${state.infantCount}` : '',
+      ].filter(Boolean).join(' / ');
+
+      return `
+        <article class="document">
+          <div class="doc-kicker">Reservation Document</div>
+          <h2 class="doc-title">HOTEL CONFIRMATION</h2>
+          <div class="confirm-hero">
+            <p class="doc-label">Confirmation No.</p>
+            <p class="confirm-no">${esc(state.confirmNo || '-')}</p>
+          </div>
+
+          <div class="doc-rule"></div>
+          <h3 class="doc-hotel-name">${esc(state.hotelName)}</h3>
+          <p class="doc-meta">${esc(state.hotelAddress)}<br>${esc(state.hotelPhone)}</p>
+
+          <div class="doc-grid">
+            <div class="doc-box"><p class="doc-label">예약자</p><p class="doc-value">${esc(state.leadGuest)}</p></div>
+            <div class="doc-box"><p class="doc-label">투숙 인원</p><p class="doc-value">${esc(pax || '-')}</p></div>
+            <div class="doc-box"><p class="doc-label">체크인</p><p class="doc-value">${esc(state.checkIn)}</p></div>
+            <div class="doc-box"><p class="doc-label">체크아웃</p><p class="doc-value">${esc(state.checkOut)}</p></div>
+            <div class="doc-box"><p class="doc-label">숙박</p><p class="doc-value">${esc(state.statedNights)}박</p></div>
+            <div class="doc-box"><p class="doc-label">객실</p><p class="doc-value">${esc(state.roomType)} / ${esc(state.roomCount)}실</p></div>
+            <div class="doc-box"><p class="doc-label">식사 조건</p><p class="doc-value">${esc(state.mealPlan)}</p></div>
+            <div class="doc-box"><p class="doc-label">결제 조건</p><p class="doc-value">${esc(state.paymentTerms)}</p></div>
+          </div>
+
+          ${state.lateCheckout ? `<div class="notice-box"><strong>레이트 체크아웃</strong><br>${esc(state.lateCheckout)}까지로 기록되어 있습니다.</div>` : ''}
+          <div class="notice-box"><strong>안내사항</strong><br>${esc(state.customerNotice)}</div>
+        </article>
+      `;
+    }
+
+    function auditHtml() {
+      const warnings = collectWarnings();
+      return `
+        <article class="document">
+          <div class="doc-kicker">Internal Review</div>
+          <h2 class="doc-title">검수표</h2>
+          <div class="doc-rule"></div>
+          <ul class="audit-list">
+            <li><strong>자동 계산 박수</strong><span>${calcNights(state.checkIn, state.checkOut)}박</span></li>
+            <li><strong>문서 표시 박수</strong><span>${esc(state.statedNights)}박</span></li>
+            <li><strong>투숙 인원</strong><span>성인 ${esc(state.adultCount)} / 아동 ${esc(state.childCount)} / 유아 ${esc(state.infantCount)}</span></li>
+            <li><strong>외화 합계</strong><span>${money(foreignTotal())}</span></li>
+            <li><strong>원화 청구액</strong><span>${krw(krwTotal())}</span></li>
+            <li><strong>환율 기준일</strong><span>${esc(state.exchangeRateDate || '-')}</span></li>
+            <li><strong>확정번호</strong><span>${esc(state.confirmNo || '-')}</span></li>
+          </ul>
+          <div class="checklist" style="margin-top:24px;">
+            ${warnings.length ? warnings.map((item) => `<div class="warning">${esc(item)}</div>`).join('') : '<div class="ok">출력 전 필수 검수 항목이 정상입니다.</div>'}
+          </div>
+        </article>
+      `;
+    }
+
+    function updateTopSummary(warnings) {
+      document.getElementById('topGuest').textContent = state.leadGuest || '-';
+      document.getElementById('topStay').textContent = `${state.checkIn || '-'} → ${state.checkOut || '-'}`;
+      document.getElementById('topAmount').textContent = krw(krwTotal());
+      document.getElementById('topReview').textContent = warnings.length ? `확인 ${warnings.length}건` : '정상';
+      document.getElementById('statusChip').textContent = state.status || '작성중';
+      document.getElementById('reviewCount').textContent = `${warnings.length}건`;
+    }
+
+    function renderPreview() {
+      const preview = document.getElementById('preview');
+      let html = invoiceHtml();
+      if (activeTab === 'confirmation') html = confirmationHtml();
+      if (activeTab === 'audit') html = auditHtml();
+      preview.innerHTML = `<div class="document-fit">${html}</div>`;
+
+      const hint = {
+        invoice: '거래처 송금 요청용',
+        confirmation: '고객 전달 가능한 확정 안내용',
+        audit: '내부 확인용',
+      };
+      document.getElementById('previewHint').textContent = hint[activeTab];
+      fitPreviewToCanvas();
+    }
+
+    function fitPreviewToCanvas() {
+      const preview = document.getElementById('preview');
+      const fit = preview.querySelector('.document-fit');
+      if (!fit) return;
+
+      if (window.matchMedia('(max-width: 920px)').matches) {
+        fit.style.setProperty('--preview-scale', '1');
+        return;
+      }
+
+      const availableWidth = Math.max(320, preview.clientWidth - 40);
+      const scale = Math.min(1, availableWidth / 794);
+      fit.style.setProperty('--preview-scale', scale.toFixed(3));
+    }
+
+    function renderSidePanel() {
+      const warnings = collectWarnings();
+      const autoNights = calcNights(state.checkIn, state.checkOut);
+      document.getElementById('metricNights').textContent = `${calcNights(state.checkIn, state.checkOut)}박`;
+      document.getElementById('metricForeign').textContent = money(foreignTotal());
+      document.getElementById('metricKrw').textContent = krw(krwTotal());
+      document.getElementById('autoNightsValue').textContent = `${autoNights}박`;
+      document.getElementById('nightsModeNote').textContent = nightsManuallyEdited
+        ? `직접 입력 중입니다. 자동값은 ${autoNights}박입니다.`
+        : '일정 입력 시 자동 반영됩니다.';
+      document.getElementById('warnings').innerHTML = warnings.length
+        ? warnings.map((item) => `<div class="warning">${esc(item)}</div>`).join('')
+        : '<div class="ok">출력 전 필수 검수 항목이 정상입니다.</div>';
+      updateTopSummary(warnings);
+    }
+
+    function renderFormValues() {
+      document.querySelectorAll('[data-field]').forEach((input) => {
+        const key = input.dataset.field;
+        if (input.value !== String(state[key] ?? '')) input.value = state[key] ?? '';
+      });
+    }
+
+    function renderAll(options = {}) {
+      renderFormValues();
+      if (!options.skipChargeRows) renderChargeRows();
+      renderSidePanel();
+      renderPreview();
+    }
+
+    function enableClickFocusSelect(input) {
+      if (!input) return;
+      input.addEventListener('focus', () => {
+        if (typeof input.select === 'function') input.select();
+      });
+      input.addEventListener('mouseup', (event) => {
+        event.preventDefault();
+      });
+    }
+
+    function bindInputs() {
+      document.querySelectorAll('[data-field]').forEach((input) => {
+        input.addEventListener('input', () => {
+          const key = input.dataset.field;
+          if (key === 'statedNights') nightsManuallyEdited = true;
+          state[key] = input.type === 'number' ? Number(input.value || 0) : input.value;
+          if (key === 'checkIn' || key === 'checkOut') syncNightsToDates();
+          renderAll({ skipChargeRows: true });
+        });
+
+        if (input.dataset.dateLabel) {
+          input.addEventListener('blur', () => {
+            const errorEl = document.getElementById(`${input.id}Error`);
+            try {
+              const normalized = normalizeDateInput(input.value, input.dataset.dateLabel);
+              input.value = normalized;
+              state[input.dataset.field] = normalized;
+              if (input.dataset.field === 'checkIn' || input.dataset.field === 'checkOut') syncNightsToDates();
+              errorEl.textContent = '';
+            } catch (error) {
+              errorEl.textContent = error.message || '날짜 형식을 확인해 주세요.';
+            }
+            renderAll({ skipChargeRows: true });
+          });
+        }
+      });
+
+      document.querySelectorAll('input[type="number"]').forEach(enableClickFocusSelect);
+
+      document.getElementById('syncNightsBtn').addEventListener('click', () => {
+        syncNightsToDates(true);
+        renderAll({ skipChargeRows: true });
+      });
+
+      document.getElementById('addChargeBtn').addEventListener('click', () => {
+        state.charges.push(chargeTemplate('custom'));
+        renderAll();
+      });
+
+      document.querySelectorAll('[data-charge-template]').forEach((button) => {
+        button.addEventListener('click', () => {
+          state.charges.push(chargeTemplate(button.dataset.chargeTemplate));
+          renderAll();
+        });
+      });
+
+      document.querySelectorAll('[data-tab]').forEach((button) => {
+        button.addEventListener('click', () => {
+          activeTab = button.dataset.tab;
+          document.querySelectorAll('[data-tab]').forEach((tab) => {
+            const isActive = tab === button;
+            tab.classList.toggle('active', isActive);
+            tab.setAttribute('aria-selected', String(isActive));
+          });
+          renderPreview();
+        });
+      });
+
+      document.getElementById('printBtn').addEventListener('click', () => window.print());
+      document.getElementById('saveDraftBtn').addEventListener('click', () => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        alert('현재 입력값을 이 브라우저에 임시 저장했습니다.');
+      });
+      document.getElementById('loadDraftBtn').addEventListener('click', () => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (!saved) {
+          alert('저장된 임시 데이터가 없습니다.');
+          return;
+        }
+        try {
+          const parsed = JSON.parse(saved);
+          state = {
+            ...structuredClone(sample),
+            ...parsed,
+            charges: Array.isArray(parsed.charges) ? parsed.charges : structuredClone(sample.charges),
+          };
+          nightsManuallyEdited = Number(state.statedNights || 0) !== calcNights(state.checkIn, state.checkOut);
+          renderAll();
+        } catch (error) {
+          alert('임시 저장 데이터를 불러오지 못했습니다. 샘플 데이터로 복원해 다시 저장해 주세요.');
+        }
+      });
+      document.getElementById('resetSampleBtn').addEventListener('click', () => {
+        state = structuredClone(sample);
+        state.charges = sample.charges.map((line) => ({ ...line, id: makeId() }));
+        nightsManuallyEdited = false;
+        renderAll();
+      });
+    }
+
+    bindInputs();
+    renderAll();
+    window.addEventListener('resize', fitPreviewToCanvas);
+  </script>
+</body>
+</html>
