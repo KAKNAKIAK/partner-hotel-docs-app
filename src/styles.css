@@ -1025,12 +1025,36 @@ th {
   grid-row: span 2;
   width: 78px;
   height: 58px;
-  border: 1px solid #bfdbfe;
+  border: 1px dashed #93c5fd;
   border-radius: 8px;
   color: #2563eb;
-  background: #fff;
+  background: #eff6ff;
+  cursor: pointer;
   font-size: 13px;
   font-weight: 900;
+  overflow: hidden;
+}
+
+.logo-box.dragging {
+  border-color: #2563eb;
+  background: #dbeafe;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.logo-box.has-image {
+  border-style: solid;
+  background: #fff;
+}
+
+.logo-box input {
+  display: none;
+}
+
+.logo-box img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .room-card {

@@ -11,6 +11,7 @@ create table if not exists public.hotels (
   name text not null,
   country text,
   city text,
+  logo_url text,
   address text,
   phone text,
   default_notice text,
@@ -66,7 +67,7 @@ values
   ('내일 투어', null)
 on conflict do nothing;
 
-insert into public.hotels (name, country, city, address, phone, default_notice, default_meal_plan)
+insert into public.hotels (name, country, city, logo_url, address, phone, default_notice, default_meal_plan)
 values
-  ('Villa Le Corail - A Gran Melia Hotel Nha Trang', 'Vietnam', 'Nha Trang', 'Bai Tien, Duong De, Vinh Hoa Ward, Nha Trang City, Khanh Hoa Province, Vietnam 65000', '+84-258-386-8888', '체크인 시 투숙객 전원의 여권을 제출해 주세요.' || chr(10) || '호텔에서 보증금 또는 현장 추가비를 요청할 수 있습니다.' || chr(10) || '미니바, 룸서비스, 전화, 세탁 등 개인 이용 금액은 현장에서 직접 결제합니다.', 'Breakfast included')
+  ('Villa Le Corail - A Gran Melia Hotel Nha Trang', 'Vietnam', 'Nha Trang', null, 'Bai Tien, Duong De, Vinh Hoa Ward, Nha Trang City, Khanh Hoa Province, Vietnam 65000', '+84-258-386-8888', '체크인 시 투숙객 전원의 여권을 제출해 주세요.' || chr(10) || '호텔에서 보증금 또는 현장 추가비를 요청할 수 있습니다.' || chr(10) || '미니바, 룸서비스, 전화, 세탁 등 개인 이용 금액은 현장에서 직접 결제합니다.', 'Breakfast included')
 on conflict do nothing;

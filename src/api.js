@@ -46,6 +46,7 @@ export async function searchHotels(query = '') {
     name: item.name,
     country: item.country,
     city: item.city,
+    logoUrl: item.logo_url,
     address: item.address,
     phone: item.phone,
     defaultNotice: item.default_notice,

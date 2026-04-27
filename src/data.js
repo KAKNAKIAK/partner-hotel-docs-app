@@ -27,6 +27,7 @@ export const hotels = [
     name: 'Villa Le Corail - A Gran Melia Hotel Nha Trang',
     country: 'Vietnam',
     city: 'Nha Trang',
+    logoUrl: '',
     address: 'Bai Tien, Duong De, Vinh Hoa Ward, Nha Trang City, Khanh Hoa Province, Vietnam 65000',
     phone: '+84-258-386-8888',
     defaultNotice:
@@ -38,6 +39,7 @@ export const hotels = [
     name: 'Sample Resort Guam',
     country: 'Guam',
     city: 'Tumon',
+    logoUrl: '',
     address: 'Tumon Bay, Guam',
     phone: '+1-671-000-0000',
     defaultNotice:

@@ -594,6 +594,7 @@ function App() {
 
 function MasterDataManager({ onClose }) {
   const ciInputId = useId();
+  const hotelViInputId = useId();
   const [activeTab, setActiveTab] = useState('hotels');
   const [partners, setPartners] = useState(seedPartners);
   const [hotels, setHotels] = useState(seedHotels);
@@ -608,6 +609,7 @@ function MasterDataManager({ onClose }) {
   const [newPartnerCi, setNewPartnerCi] = useState('');
   const [newPartner, setNewPartner] = useState('');
   const [isCiDragging, setIsCiDragging] = useState(false);
+  const [isHotelViDragging, setIsHotelViDragging] = useState(false);
 
   const countries = Array.from(new Set(hotels.map((hotel) => hotel.country).filter(Boolean)));
   const cities = Array.from(
@@ -647,6 +649,7 @@ function MasterDataManager({ onClose }) {
       city: selectedCity,
       address: '',
       phone: '',
+      logoUrl: '',
       defaultNotice: '',
       defaultMealPlan: '',
       rooms: [],
@@ -702,6 +705,21 @@ function MasterDataManager({ onClose }) {
     event.preventDefault();
     setIsCiDragging(false);
     loadPartnerCi(event.dataTransfer.files?.[0]);
+  }
+
+  function loadHotelVi(file) {
+    if (!file || !file.type.startsWith('image/') || !selectedHotel) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      updateSelectedHotel({ logoUrl: String(reader.result || '') });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleHotelViDrop(event) {
+    event.preventDefault();
+    setIsHotelViDragging(false);
+    loadHotelVi(event.dataTransfer.files?.[0]);
   }
 
   const tabs = [
@@ -832,7 +850,25 @@ function MasterDataManager({ onClose }) {
               <div className="master-card hotel-detail-card">
                 <header>호텔 상세 정보</header>
                 <div className="hotel-detail-body">
-                  <div className="logo-box">{selectedHotel?.name?.slice(0, 2) || 'HT'}</div>
+                  <label
+                    className={`logo-box vi-dropzone ${isHotelViDragging ? 'dragging' : ''} ${selectedHotel?.logoUrl ? 'has-image' : ''}`}
+                    htmlFor={hotelViInputId}
+                    onDragEnter={(event) => {
+                      event.preventDefault();
+                      setIsHotelViDragging(true);
+                    }}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDragLeave={() => setIsHotelViDragging(false)}
+                    onDrop={handleHotelViDrop}
+                  >
+                    <input
+                      id={hotelViInputId}
+                      type="file"
+                      accept="image/*"
+                      onChange={(event) => loadHotelVi(event.target.files?.[0])}
+                    />
+                    {selectedHotel?.logoUrl ? <img src={selectedHotel.logoUrl} alt="" /> : <span>VI</span>}
+                  </label>
                   <Field label="호텔 주소">
                     <textarea
                       value={selectedHotel?.address || ''}
