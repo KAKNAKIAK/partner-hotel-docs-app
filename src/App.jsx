@@ -867,8 +867,8 @@ function MasterDataManager({ onClose }) {
                 ))}
               </div>
               <footer className="hotel-add">
-                <input value={newHotelEnglish} onChange={(event) => setNewHotelEnglish(event.target.value)} placeholder="영문명" />
                 <input value={newHotelKorean} onChange={(event) => setNewHotelKorean(event.target.value)} placeholder="한글명" />
+                <input value={newHotelEnglish} onChange={(event) => setNewHotelEnglish(event.target.value)} placeholder="영문명" />
                 <button className="master-add" type="button" onClick={addHotel}>+</button>
               </footer>
             </div>
