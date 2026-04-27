@@ -45,6 +45,17 @@ function calcNights(checkIn, checkOut) {
   return Math.max(0, Math.round((end - start) / 86400000));
 }
 
+function todayDate() {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+function createInitialReservation() {
+  return { ...initialReservation, issueDate: todayDate() };
+}
+
 function lineTotal(line) {
   return Number(line.unitPrice || 0) * Number(line.quantity || 0) * Number(line.nights || 0);
 }
@@ -190,7 +201,7 @@ function Step({ number, title, children }) {
 }
 
 function App() {
-  const [reservation, setReservation] = useState(initialReservation);
+  const [reservation, setReservation] = useState(() => createInitialReservation());
   const [activeTab, setActiveTab] = useState('invoice');
   const [activeStep, setActiveStep] = useState('source');
   const [manualNights, setManualNights] = useState(false);
@@ -332,7 +343,7 @@ function App() {
           alert('Supabase에 저장된 예약이 없습니다.');
           return;
         }
-        setReservation({ ...initialReservation, ...saved });
+        setReservation({ ...createInitialReservation(), ...saved });
       })
       .catch((error) => {
         console.error(error);
@@ -366,8 +377,16 @@ function App() {
           <Summary label="청구액" value={krw(krwTotal)} />
           <Summary label="검수" value={warnings.length ? `확인 ${warnings.length}건` : '정상'} />
         </div>
+        <label className="header-date-field">
+          <span>작성일</span>
+          <input
+            type="date"
+            value={reservation.issueDate}
+            onChange={(event) => patchField('issueDate', event.target.value)}
+          />
+        </label>
         <div className="toolbar">
-          <button className="btn" type="button" onClick={() => setReservation(initialReservation)}>
+          <button className="btn" type="button" onClick={() => setReservation(createInitialReservation())}>
             초기화
           </button>
           <button className="btn" type="button" onClick={saveDraft}>
@@ -454,25 +473,7 @@ function App() {
                   onSelect={selectHotel}
                   placeholder="호텔명을 입력하세요"
                 />
-                <TextInput label="예약명" value={reservation.leadGuest} onChange={(value) => patchField('leadGuest', value)} />
                 <TextInput label="확정번호" value={reservation.confirmNo} onChange={(value) => patchField('confirmNo', value)} />
-                <TextInput label="작성일" value={reservation.issueDate} onChange={(value) => patchField('issueDate', value)} />
-                <Field label="상태">
-                  <select value={reservation.status} onChange={(event) => patchField('status', event.target.value)}>
-                    <option>작성중</option>
-                    <option>검수필요</option>
-                    <option>확정완료</option>
-                    <option>송금요청</option>
-                    <option>입금완료</option>
-                  </select>
-                </Field>
-              </div>
-            </Step>
-            )}
-
-            {activeStep === 'stay' && (
-            <Step number="3" title="투숙 조건">
-              <div className="grid grid-2">
                 <TextInput label="체크인" value={reservation.checkIn} onChange={(value) => patchField('checkIn', value)} />
                 <TextInput label="체크아웃" value={reservation.checkOut} onChange={(value) => patchField('checkOut', value)} />
                 <Field label="자동 계산 박수">
@@ -503,10 +504,18 @@ function App() {
                 </Field>
                 <TextInput label="객실 타입" value={reservation.roomType} onChange={(value) => patchField('roomType', value)} />
                 <NumberInput label="객실 수" value={reservation.roomCount} onChange={(value) => patchField('roomCount', value)} />
+                <TextInput label="레이트 체크아웃" value={reservation.lateCheckout} onChange={(value) => patchField('lateCheckout', value)} />
+              </div>
+            </Step>
+            )}
+
+            {activeStep === 'stay' && (
+            <Step number="3" title="예약명·인원">
+              <div className="grid grid-2">
+                <TextInput label="예약명" className="span-2" value={reservation.leadGuest} onChange={(value) => patchField('leadGuest', value)} />
                 <NumberInput label="성인" value={reservation.adultCount} onChange={(value) => patchField('adultCount', value)} />
                 <NumberInput label="아동" value={reservation.childCount} onChange={(value) => patchField('childCount', value)} />
                 <NumberInput label="유아" value={reservation.infantCount} onChange={(value) => patchField('infantCount', value)} />
-                <TextInput label="레이트 체크아웃" value={reservation.lateCheckout} onChange={(value) => patchField('lateCheckout', value)} />
               </div>
             </Step>
             )}

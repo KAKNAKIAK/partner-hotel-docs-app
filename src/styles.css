@@ -104,6 +104,28 @@ button { cursor: pointer; }
   white-space: nowrap;
 }
 
+.header-date-field {
+  display: grid;
+  gap: 4px;
+  min-width: 132px;
+}
+
+.header-date-field span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.header-date-field input {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .toolbar {
   display: flex;
   flex-wrap: wrap;
