@@ -1057,8 +1057,14 @@ th {
 
 .company-info-body {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
   gap: 12px;
   padding: 14px;
+}
+
+.company-info-body > * {
+  grid-column: 1 !important;
 }
 
 .company-image-grid,
@@ -1079,7 +1085,7 @@ th {
 }
 
 .company-actions {
-  grid-column: auto;
+  grid-column: 1 !important;
 }
 
 .company-actions .btn {
