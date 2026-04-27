@@ -6,6 +6,22 @@ create table if not exists public.partners (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.countries (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.regions (
+  id uuid primary key default gen_random_uuid(),
+  country_id uuid not null references public.countries(id) on delete cascade,
+  name text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(country_id, name)
+);
+
 create table if not exists public.hotels (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -55,6 +71,8 @@ create table if not exists public.reservations (
 );
 
 alter table public.partners enable row level security;
+alter table public.countries enable row level security;
+alter table public.regions enable row level security;
 alter table public.hotels enable row level security;
 alter table public.reservations enable row level security;
 
@@ -67,6 +85,14 @@ drop policy if exists "partners read anon" on public.partners;
 drop policy if exists "partners insert anon" on public.partners;
 drop policy if exists "partners update anon" on public.partners;
 drop policy if exists "partners delete anon" on public.partners;
+drop policy if exists "countries read anon" on public.countries;
+drop policy if exists "countries insert anon" on public.countries;
+drop policy if exists "countries update anon" on public.countries;
+drop policy if exists "countries delete anon" on public.countries;
+drop policy if exists "regions read anon" on public.regions;
+drop policy if exists "regions insert anon" on public.regions;
+drop policy if exists "regions update anon" on public.regions;
+drop policy if exists "regions delete anon" on public.regions;
 drop policy if exists "hotels read anon" on public.hotels;
 drop policy if exists "hotels insert anon" on public.hotels;
 drop policy if exists "hotels update anon" on public.hotels;
@@ -79,6 +105,14 @@ create policy "partners read anon" on public.partners for select using (true);
 create policy "partners insert anon" on public.partners for insert with check (true);
 create policy "partners update anon" on public.partners for update using (true) with check (true);
 create policy "partners delete anon" on public.partners for delete using (true);
+create policy "countries read anon" on public.countries for select using (true);
+create policy "countries insert anon" on public.countries for insert with check (true);
+create policy "countries update anon" on public.countries for update using (true) with check (true);
+create policy "countries delete anon" on public.countries for delete using (true);
+create policy "regions read anon" on public.regions for select using (true);
+create policy "regions insert anon" on public.regions for insert with check (true);
+create policy "regions update anon" on public.regions for update using (true) with check (true);
+create policy "regions delete anon" on public.regions for delete using (true);
 create policy "hotels read anon" on public.hotels for select using (true);
 create policy "hotels insert anon" on public.hotels for insert with check (true);
 create policy "hotels update anon" on public.hotels for update using (true) with check (true);

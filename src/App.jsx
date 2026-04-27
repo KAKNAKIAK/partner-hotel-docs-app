@@ -2,11 +2,15 @@ import { cloneElement, isValidElement, useEffect, useId, useMemo, useState } fro
 import { initialReservation } from './data.js';
 import {
   createHotel,
+  createCountry,
   createPartner,
+  createRegion,
   deleteHotel,
   deletePartner,
+  listCountries,
   listHotels,
   listPartners,
+  listRegions,
   loadLatestReservation,
   saveReservation,
   searchHotels,
@@ -610,9 +614,11 @@ function MasterDataManager({ onClose }) {
   const [activeTab, setActiveTab] = useState('hotels');
   const [partners, setPartners] = useState([]);
   const [hotels, setHotels] = useState([]);
+  const [countries, setCountries] = useState([]);
+  const [regions, setRegions] = useState([]);
   const [selectedPartnerId, setSelectedPartnerId] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState('');
-  const [selectedCity, setSelectedCity] = useState('');
+  const [selectedCountryId, setSelectedCountryId] = useState('');
+  const [selectedRegionId, setSelectedRegionId] = useState('');
   const [selectedHotelId, setSelectedHotelId] = useState('');
   const [newCountry, setNewCountry] = useState('');
   const [newCity, setNewCity] = useState('');
@@ -624,26 +630,27 @@ function MasterDataManager({ onClose }) {
   const [isHotelViDragging, setIsHotelViDragging] = useState(false);
   const [masterState, setMasterState] = useState('불러오는 중');
 
-  const countries = Array.from(new Set(hotels.map((hotel) => hotel.country).filter(Boolean)));
-  const cities = Array.from(
-    new Set(hotels.filter((hotel) => hotel.country === selectedCountry).map((hotel) => hotel.city).filter(Boolean))
-  );
-  const visibleHotels = hotels.filter((hotel) => hotel.country === selectedCountry && hotel.city === selectedCity);
+  const selectedCountry = countries.find((country) => country.id === selectedCountryId);
+  const visibleRegions = regions.filter((region) => region.countryId === selectedCountryId);
+  const selectedRegion = regions.find((region) => region.id === selectedRegionId);
+  const visibleHotels = hotels.filter((hotel) => hotel.country === selectedCountry?.name && hotel.city === selectedRegion?.name);
   const selectedHotel = hotels.find((hotel) => hotel.id === selectedHotelId) || visibleHotels[0] || hotels[0];
   const selectedPartner = partners.find((partner) => partner.id === selectedPartnerId) || partners[0];
   const rooms = selectedHotel?.rooms || [];
 
   useEffect(() => {
     let ignore = false;
-    Promise.all([listPartners(), listHotels()])
-      .then(([partnerRows, hotelRows]) => {
+    Promise.all([listPartners(), listHotels(), listCountries(), listRegions()])
+      .then(([partnerRows, hotelRows, countryRows, regionRows]) => {
         if (ignore) return;
         setPartners(partnerRows);
         setHotels(hotelRows);
+        setCountries(countryRows);
+        setRegions(regionRows);
         setSelectedPartnerId(partnerRows[0]?.id || '');
-        setSelectedCountry(hotelRows[0]?.country || '');
-        setSelectedCity(hotelRows[0]?.city || '');
-        setSelectedHotelId(hotelRows[0]?.id || '');
+        setSelectedCountryId(countryRows[0]?.id || '');
+        setSelectedRegionId(regionRows.find((region) => region.countryId === countryRows[0]?.id)?.id || '');
+        setSelectedHotelId('');
         setMasterState('Supabase 연결 완료');
       })
       .catch((error) => {
@@ -658,15 +665,48 @@ function MasterDataManager({ onClose }) {
   function addCountry() {
     const trimmed = newCountry.trim();
     if (!trimmed) return;
-    setSelectedCountry(trimmed);
-    setNewCountry('');
+    const existing = countries.find((country) => country.name === trimmed);
+    if (existing) {
+      setSelectedCountryId(existing.id);
+      setNewCountry('');
+      return;
+    }
+    setMasterState('국가 저장 중');
+    createCountry(trimmed)
+      .then((saved) => {
+        setCountries((current) => [...current, saved]);
+        setSelectedCountryId(saved.id);
+        setSelectedRegionId('');
+        setNewCountry('');
+        setMasterState('국가 저장 완료');
+      })
+      .catch((error) => {
+        console.error(error);
+        setMasterState('국가 저장 실패');
+      });
   }
 
   function addCity() {
     const trimmed = newCity.trim();
-    if (!trimmed) return;
-    setSelectedCity(trimmed);
-    setNewCity('');
+    if (!trimmed || !selectedCountryId) return;
+    const existing = regions.find((region) => region.countryId === selectedCountryId && region.name === trimmed);
+    if (existing) {
+      setSelectedRegionId(existing.id);
+      setNewCity('');
+      return;
+    }
+    setMasterState('지역 저장 중');
+    createRegion(selectedCountryId, trimmed)
+      .then((saved) => {
+        setRegions((current) => [...current, saved]);
+        setSelectedRegionId(saved.id);
+        setNewCity('');
+        setMasterState('지역 저장 완료');
+      })
+      .catch((error) => {
+        console.error(error);
+        setMasterState('지역 저장 실패');
+      });
   }
 
   function addHotel() {
@@ -676,8 +716,8 @@ function MasterDataManager({ onClose }) {
       id: makeId(),
       name,
       koreanName: newHotelKorean.trim(),
-      country: selectedCountry,
-      city: selectedCity,
+      country: selectedCountry?.name || '',
+      city: selectedRegion?.name || '',
       address: '',
       phone: '',
       logoUrl: '',
@@ -838,9 +878,11 @@ function MasterDataManager({ onClose }) {
       .then(() => {
         setHotels((current) => {
           const next = current.filter((hotel) => hotel.id !== selectedHotel.id);
-          const nextHotel = next.find((hotel) => hotel.country === selectedCountry && hotel.city === selectedCity) || next[0];
-          setSelectedCountry(nextHotel?.country || '');
-          setSelectedCity(nextHotel?.city || '');
+          const nextHotel = next.find((hotel) => hotel.country === selectedCountry?.name && hotel.city === selectedRegion?.name) || next[0];
+          const nextCountry = countries.find((country) => country.name === nextHotel?.country);
+          const nextRegion = regions.find((region) => region.countryId === nextCountry?.id && region.name === nextHotel?.city);
+          setSelectedCountryId(nextCountry?.id || '');
+          setSelectedRegionId(nextRegion?.id || '');
           setSelectedHotelId(nextHotel?.id || '');
           return next;
         });
@@ -954,12 +996,14 @@ function MasterDataManager({ onClose }) {
             <MasterColumn
               title="국가"
               items={countries}
-              active={selectedCountry}
-              onSelect={(value) => {
-                setSelectedCountry(value);
-                const nextCity = hotels.find((hotel) => hotel.country === value)?.city || '';
-                setSelectedCity(nextCity);
-                setSelectedHotelId(hotels.find((hotel) => hotel.country === value && hotel.city === nextCity)?.id || '');
+              getKey={(country) => country.id}
+              getLabel={(country) => country.name}
+              active={selectedCountryId}
+              onSelect={(country) => {
+                setSelectedCountryId(country.id);
+                const nextRegion = regions.find((region) => region.countryId === country.id);
+                setSelectedRegionId(nextRegion?.id || '');
+                setSelectedHotelId('');
               }}
               inputValue={newCountry}
               inputPlaceholder="국가 추가"
@@ -968,11 +1012,13 @@ function MasterDataManager({ onClose }) {
             />
             <MasterColumn
               title="지역"
-              items={cities}
-              active={selectedCity}
-              onSelect={(value) => {
-                setSelectedCity(value);
-                setSelectedHotelId(hotels.find((hotel) => hotel.country === selectedCountry && hotel.city === value)?.id || '');
+              items={visibleRegions}
+              getKey={(region) => region.id}
+              getLabel={(region) => region.name}
+              active={selectedRegionId}
+              onSelect={(region) => {
+                setSelectedRegionId(region.id);
+                setSelectedHotelId(hotels.find((hotel) => hotel.country === selectedCountry?.name && hotel.city === region.name)?.id || '');
               }}
               inputValue={newCity}
               inputPlaceholder="지역 추가"
@@ -1065,14 +1111,30 @@ function MasterDataManager({ onClose }) {
   );
 }
 
-function MasterColumn({ title, items, active, onSelect, inputValue, inputPlaceholder, onInput, onAdd }) {
+function MasterColumn({
+  title,
+  items,
+  active,
+  onSelect,
+  inputValue,
+  inputPlaceholder,
+  onInput,
+  onAdd,
+  getKey = (item) => item,
+  getLabel = (item) => item,
+}) {
   return (
     <div className="master-card master-column">
       <header>{title}</header>
       <div className="master-list">
         {items.map((item) => (
-          <button key={item} type="button" className={active === item ? 'active' : ''} onClick={() => onSelect(item)}>
-            {item}
+          <button
+            key={getKey(item)}
+            type="button"
+            className={active === getKey(item) ? 'active' : ''}
+            onClick={() => onSelect(item)}
+          >
+            {getLabel(item)}
           </button>
         ))}
       </div>

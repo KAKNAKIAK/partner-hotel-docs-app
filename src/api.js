@@ -31,6 +31,54 @@ function hotelFromRow(item) {
   };
 }
 
+function countryFromRow(item) {
+  return {
+    id: item.id,
+    name: item.name || '',
+  };
+}
+
+function regionFromRow(item) {
+  return {
+    id: item.id,
+    countryId: item.country_id,
+    countryName: item.country_name || '',
+    name: item.name || '',
+  };
+}
+
+export async function listCountries() {
+  const data = await supabaseFetch('countries?select=*&order=name.asc');
+  return data.map(countryFromRow);
+}
+
+export async function createCountry(name) {
+  const data = await supabaseFetch('countries?select=*', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+  return countryFromRow(data[0]);
+}
+
+export async function listRegions() {
+  const data = await supabaseFetch('regions?select=*,countries(name)&order=name.asc');
+  return data.map((item) => regionFromRow({
+    ...item,
+    country_name: item.countries?.name || '',
+  }));
+}
+
+export async function createRegion(countryId, name) {
+  const data = await supabaseFetch('regions?select=*,countries(name)', {
+    method: 'POST',
+    body: JSON.stringify({ country_id: countryId, name }),
+  });
+  return regionFromRow({
+    ...data[0],
+    country_name: data[0]?.countries?.name || '',
+  });
+}
+
 export async function listPartners() {
   const data = await supabaseFetch('partners?select=*&order=name.asc');
   return data.map(partnerFromRow);
