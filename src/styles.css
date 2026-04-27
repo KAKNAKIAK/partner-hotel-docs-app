@@ -991,7 +991,7 @@ th {
 
 .hotel-detail-body {
   display: grid;
-  grid-template-columns: 86px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   padding: 12px;
 }
@@ -1004,11 +1004,21 @@ th {
 }
 
 .hotel-detail-body .field:nth-of-type(1) {
-  grid-column: 2;
+  grid-column: 1;
 }
 
 .hotel-detail-body .field:nth-of-type(2) {
-  grid-column: 1 / -1;
+  grid-column: 1;
+}
+
+.hotel-detail-body .logo-box {
+  grid-row: auto;
+  width: 100%;
+  height: 58px;
+}
+
+.hotel-detail-body .detail-actions {
+  grid-column: 1;
 }
 
 .detail-actions {
