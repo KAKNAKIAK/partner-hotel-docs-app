@@ -1,6 +1,7 @@
 import { cloneElement, isValidElement, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { initialReservation } from './data.js';
 import {
+  createExchangeRate,
   createHotel,
   createCompanyInfo,
   createCountry,
@@ -15,11 +16,14 @@ import {
   deleteRegion,
   listCountries,
   listCompanyInfos,
+  listExchangeRates,
+  listExchangeRatesByDate,
   listHotels,
   listPartners,
   listPhraseSnippets,
   listRegions,
   loadLatestReservation,
+  loadLatestExchangeRate,
   saveReservation,
   searchCompanyInfos,
   searchHotels,
@@ -87,6 +91,19 @@ function todayDate() {
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
   return `${now.getFullYear()}-${month}-${day}`;
+}
+
+function formatDateTime(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function createInitialReservation() {
@@ -448,8 +465,13 @@ function App() {
   const [currentFileName, setCurrentFileName] = useState('');
   const [recentFiles, setRecentFiles] = useState(() => readRecentFiles());
   const [recentOpen, setRecentOpen] = useState(false);
+  const [issueDateEditing, setIssueDateEditing] = useState(false);
+  const [issueDateError, setIssueDateError] = useState('');
+  const [exchangeSaveState, setExchangeSaveState] = useState('');
   const nightsInputRef = useRef(null);
   const fileInputRef = useRef(null);
+  const exchangeRateInputId = useId();
+  const issueDateInputId = useId();
 
   useEffect(() => {
     if (!masterOpen) return undefined;
@@ -467,6 +489,28 @@ function App() {
 
     document.addEventListener('click', closeRecentMenu);
     return () => document.removeEventListener('click', closeRecentMenu);
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+    loadLatestExchangeRate(reservation.currency || 'USD')
+      .then((savedRate) => {
+        if (ignore || !savedRate) return;
+        setReservation((current) => ({
+          ...current,
+          currency: savedRate.currency || current.currency,
+          exchangeRate: savedRate.rate,
+          exchangeRateDate: savedRate.exchangeDate,
+        }));
+        setExchangeSaveState(`저장 환율 불러옴: ${savedRate.exchangeDate}`);
+      })
+      .catch((error) => {
+        console.error(error);
+        if (!ignore) setExchangeSaveState('저장 환율을 불러오지 못했습니다');
+      });
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const autoNights = calcNights(reservation.checkIn, reservation.checkOut);
@@ -516,6 +560,67 @@ function App() {
     setReservation((current) => {
       return { ...current, [key]: value };
     });
+  }
+
+  function handleIssueDateChange(value) {
+    patchField('issueDate', value);
+  }
+
+  function handleIssueDateBlur(value) {
+    const raw = String(value || '').trim();
+    const normalized = normalizeDateInput(raw);
+    if (normalized) {
+      patchField('issueDate', normalized);
+      setIssueDateError('');
+    } else if (!raw) {
+      patchField('issueDate', todayDate());
+      setIssueDateError('');
+    } else {
+      setIssueDateError('YYYY-MM-DD 또는 YYYYMMDD로 입력해 주세요.');
+    }
+    setIssueDateEditing(false);
+  }
+
+  async function saveExchangeRate() {
+    const issueDateRaw = String(reservation.issueDate || '').trim();
+    const exchangeDate = normalizeDateInput(issueDateRaw) || (!issueDateRaw ? todayDate() : '');
+    const rate = Number(reservation.exchangeRate || 0);
+    const currency = reservation.currency || 'USD';
+
+    if (!exchangeDate) {
+      setIssueDateError('YYYY-MM-DD 또는 YYYYMMDD로 입력해 주세요.');
+      setExchangeSaveState('작성일을 확인해 주세요');
+      return;
+    }
+
+    if (!rate || rate <= 0) {
+      setExchangeSaveState('환율을 입력해 주세요');
+      return;
+    }
+
+    try {
+      setExchangeSaveState('환율 확인 중');
+      const existing = await listExchangeRatesByDate(exchangeDate, currency);
+      if (existing.length) {
+        const confirmed = window.confirm('저장된 환율정보가 있습니다 수정하시겠습니까?');
+        if (!confirmed) {
+          setExchangeSaveState('환율 저장 취소');
+          return;
+        }
+      }
+
+      const saved = await createExchangeRate({ currency, rate, exchangeDate });
+      patch({
+        currency: saved.currency,
+        exchangeRate: saved.rate,
+        exchangeRateDate: saved.exchangeDate,
+        issueDate: saved.exchangeDate,
+      });
+      setExchangeSaveState(`환율 저장 완료: ${formatDateTime(saved.savedAt)}`);
+    } catch (error) {
+      console.error(error);
+      setExchangeSaveState('환율 저장 실패');
+    }
   }
 
   function handleCheckInChange(value) {
@@ -898,15 +1003,43 @@ function App() {
   return (
     <>
       <header className="app-topbar">
+        <button className="btn" type="button" onClick={() => setMasterOpen(true)}>
+          마스터 관리
+        </button>
         <div className="brand">
           <h1 className="brand-title">인보이스& 바우처</h1>
         </div>
-        <label className="header-date-field">
-          <span>작성일</span>
+        <div className="header-exchange">
+          <label htmlFor={exchangeRateInputId}>
+            <span>환율</span>
+            <input
+              id={exchangeRateInputId}
+              type="number"
+              min="0"
+              step="0.01"
+              value={reservation.exchangeRate}
+              onFocus={(event) => event.target.select()}
+              onMouseUp={(event) => event.preventDefault()}
+              onChange={(event) => patchField('exchangeRate', event.target.value)}
+            />
+          </label>
+          <button className="btn btn-primary" type="button" onClick={saveExchangeRate}>
+            환율 저장
+          </button>
+        </div>
+        <label className={`header-date-field ${issueDateError ? 'has-error' : ''}`} htmlFor={issueDateInputId}>
+          <span>{issueDateError || '작성일'}</span>
           <input
-            type="date"
+            id={issueDateInputId}
+            type="text"
+            inputMode="numeric"
             value={reservation.issueDate}
-            onChange={(event) => patchField('issueDate', event.target.value)}
+            readOnly={!issueDateEditing}
+            title="클릭하면 수정할 수 있습니다. YYYY-MM-DD 또는 YYYYMMDD로 입력하세요."
+            onClick={() => setIssueDateEditing(true)}
+            onFocus={() => setIssueDateEditing(true)}
+            onChange={(event) => handleIssueDateChange(event.target.value)}
+            onBlur={(event) => handleIssueDateBlur(event.target.value)}
           />
         </label>
         <div className="toolbar">
@@ -946,9 +1079,6 @@ function App() {
               </div>
             )}
           </div>
-          <button className="btn" type="button" onClick={() => setMasterOpen(true)}>
-            마스터 관리
-          </button>
           <input
             ref={fileInputRef}
             className="visually-hidden"
@@ -1317,6 +1447,7 @@ function App() {
               <p className="quick-note">
                 현재 데이터 소스: {hasSupabaseConfig ? 'Supabase' : 'Supabase 환경변수 미설정'}<br />
                 현재 파일: {currentFileName || '새 문서'}<br />
+                환율 상태: {exchangeSaveState || '저장 환율 대기'}<br />
                 {saveState || '검색, 저장, 마스터 관리는 Supabase DB와 직접 연결됩니다.'}
               </p>
             </div>
@@ -1340,6 +1471,7 @@ function MasterDataManager({ onClose }) {
   const [regions, setRegions] = useState([]);
   const [companyInfos, setCompanyInfos] = useState([]);
   const [phraseSnippets, setPhraseSnippets] = useState([]);
+  const [exchangeRates, setExchangeRates] = useState([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
   const [selectedPhraseId, setSelectedPhraseId] = useState('');
   const [selectedPartnerId, setSelectedPartnerId] = useState('');
@@ -1372,8 +1504,16 @@ function MasterDataManager({ onClose }) {
 
   useEffect(() => {
     let ignore = false;
-    Promise.all([listPartners(), listHotels(), listCountries(), listRegions(), listCompanyInfos(), listPhraseSnippets()])
-      .then(([partnerRows, hotelRows, countryRows, regionRows, companyRows, phraseRows]) => {
+    Promise.all([
+      listPartners(),
+      listHotels(),
+      listCountries(),
+      listRegions(),
+      listCompanyInfos(),
+      listPhraseSnippets(),
+      listExchangeRates(),
+    ])
+      .then(([partnerRows, hotelRows, countryRows, regionRows, companyRows, phraseRows, exchangeRateRows]) => {
         if (ignore) return;
         setPartners(partnerRows);
         setHotels(hotelRows);
@@ -1381,6 +1521,7 @@ function MasterDataManager({ onClose }) {
         setRegions(regionRows);
         setCompanyInfos(companyRows);
         setPhraseSnippets(phraseRows);
+        setExchangeRates(exchangeRateRows);
         setSelectedCompanyId(companyRows[0]?.id || '');
         setSelectedPhraseId(phraseRows[0]?.id || '');
         setSelectedPartnerId(partnerRows[0]?.id || '');
@@ -1979,6 +2120,7 @@ function MasterDataManager({ onClose }) {
     ['partners', '여행사'],
     ['company', '업체 정보'],
     ['phrases', '자주쓰는 문구 DB'],
+    ['exchangeRates', '환율'],
   ];
 
   return (
@@ -2236,6 +2378,26 @@ function MasterDataManager({ onClose }) {
                 <div className="detail-actions phrase-actions">
                   <button className="btn btn-primary btn-small" type="button" onClick={saveSelectedPhrase}>저장</button>
                 </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'exchangeRates' && (
+          <section className="master-rate-grid">
+            <div className="master-card rate-list-card">
+              <header>환율 저장 이력</header>
+              <div className="rate-list">
+                {exchangeRates.length === 0 && (
+                  <div className="rate-empty">저장된 환율 정보가 없습니다.</div>
+                )}
+                {exchangeRates.map((rate) => (
+                  <div className="rate-row" key={rate.id}>
+                    <strong>{rate.exchangeDate}</strong>
+                    <span>{rate.currency} {Number(rate.rate || 0).toLocaleString('ko-KR')}</span>
+                    <em>{formatDateTime(rate.savedAt)}</em>
+                  </div>
+                ))}
               </div>
             </div>
           </section>

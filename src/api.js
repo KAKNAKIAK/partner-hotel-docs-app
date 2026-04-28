@@ -110,6 +110,16 @@ function phraseToRow(phrase) {
   };
 }
 
+function exchangeRateFromRow(item = {}) {
+  return {
+    id: item.id,
+    currency: item.currency || 'USD',
+    rate: Number(item.exchange_rate || 0),
+    exchangeDate: item.exchange_date || '',
+    savedAt: item.created_at || '',
+  };
+}
+
 export async function listCompanyInfos() {
   const data = await supabaseFetch('company_settings?select=*&order=name.asc');
   return data.map(companyInfoFromRow);
@@ -179,6 +189,46 @@ export async function deletePhraseSnippet(id) {
     headers: { Prefer: 'return=minimal' },
   });
   return id;
+}
+
+export async function listExchangeRates() {
+  const data = await supabaseFetch('exchange_rates?select=*&order=exchange_date.desc,created_at.asc');
+  return data.map(exchangeRateFromRow);
+}
+
+export async function listExchangeRatesByDate(exchangeDate, currency = 'USD') {
+  const params = new URLSearchParams({
+    select: '*',
+    exchange_date: `eq.${exchangeDate}`,
+    currency: `eq.${currency || 'USD'}`,
+    order: 'created_at.asc',
+  });
+  const data = await supabaseFetch(`exchange_rates?${params.toString()}`);
+  return data.map(exchangeRateFromRow);
+}
+
+export async function loadLatestExchangeRate(currency = 'USD') {
+  const params = new URLSearchParams({
+    select: '*',
+    currency: `eq.${currency || 'USD'}`,
+    order: 'exchange_date.desc,created_at.desc',
+    limit: '1',
+  });
+  const data = await supabaseFetch(`exchange_rates?${params.toString()}`);
+  if (!data.length) return null;
+  return exchangeRateFromRow(data[0]);
+}
+
+export async function createExchangeRate(exchangeRate) {
+  const data = await supabaseFetch('exchange_rates?select=*', {
+    method: 'POST',
+    body: JSON.stringify({
+      currency: exchangeRate.currency || 'USD',
+      exchange_rate: Number(exchangeRate.rate || 0),
+      exchange_date: exchangeRate.exchangeDate,
+    }),
+  });
+  return exchangeRateFromRow(data[0]);
 }
 
 export async function listCountries() {

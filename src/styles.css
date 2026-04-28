@@ -53,7 +53,7 @@ button { cursor: pointer; }
   backdrop-filter: blur(14px);
 }
 
-.brand { min-width: 240px; }
+.brand { min-width: 150px; }
 
 .brand-kicker {
   color: var(--blue);
@@ -110,13 +110,32 @@ button { cursor: pointer; }
   min-width: 132px;
 }
 
+.header-exchange {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+}
+
+.header-exchange label {
+  display: grid;
+  gap: 4px;
+  min-width: 118px;
+}
+
+.header-exchange span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+}
+
 .header-date-field span {
   color: var(--muted);
   font-size: 10px;
   font-weight: 900;
 }
 
-.header-date-field input {
+.header-date-field input,
+.header-exchange input {
   min-height: 38px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -124,6 +143,20 @@ button { cursor: pointer; }
   color: var(--navy);
   font-size: 12px;
   font-weight: 900;
+}
+
+.header-date-field input[readonly] {
+  background: var(--surface-soft);
+  cursor: pointer;
+}
+
+.header-date-field.has-error span {
+  color: var(--red);
+}
+
+.header-date-field.has-error input {
+  border-color: var(--red);
+  background: var(--red-soft);
 }
 
 .toolbar {
@@ -1196,6 +1229,63 @@ th {
   overflow: hidden;
 }
 
+.master-rate-grid {
+  flex: 1;
+  min-height: 0;
+  padding: 14px;
+  overflow: hidden;
+}
+
+.rate-list-card {
+  height: 100%;
+}
+
+.rate-list {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  overflow: auto;
+}
+
+.rate-row {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) 180px;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--surface-soft);
+  font-size: 12px;
+}
+
+.rate-row strong {
+  color: var(--navy);
+}
+
+.rate-row span {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rate-row em,
+.rate-empty {
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.rate-empty {
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  padding: 18px;
+  text-align: center;
+}
+
 .master-card {
   display: flex;
   flex-direction: column;
@@ -1733,6 +1823,10 @@ th {
 
   .toolbar { justify-content: flex-start; }
 
+  .header-exchange {
+    align-items: stretch;
+  }
+
   .app-shell {
     grid-template-columns: 1fr;
     padding: 10px;
@@ -1785,7 +1879,8 @@ th {
   }
 
   .master-hotel-grid,
-  .master-agency-grid {
+  .master-agency-grid,
+  .master-rate-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1836,6 +1931,11 @@ th {
   .brand { min-width: 0; }
   .top-summary { grid-template-columns: 1fr; }
 
+  .header-exchange {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
   .toolbar {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1857,6 +1957,10 @@ th {
   }
 
   .step-nav {
+    grid-template-columns: 1fr;
+  }
+
+  .rate-row {
     grid-template-columns: 1fr;
   }
 

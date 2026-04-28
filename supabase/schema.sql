@@ -93,6 +93,14 @@ create table if not exists public.reservations (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.exchange_rates (
+  id uuid primary key default gen_random_uuid(),
+  currency text not null default 'USD',
+  exchange_rate numeric not null,
+  exchange_date date not null,
+  created_at timestamptz not null default now()
+);
+
 alter table public.partners enable row level security;
 alter table public.countries enable row level security;
 alter table public.regions enable row level security;
@@ -100,6 +108,7 @@ alter table public.company_settings enable row level security;
 alter table public.phrase_snippets enable row level security;
 alter table public.hotels enable row level security;
 alter table public.reservations enable row level security;
+alter table public.exchange_rates enable row level security;
 
 alter table public.partners add column if not exists ci_url text;
 alter table public.company_settings add column if not exists ci_url text;
@@ -144,6 +153,9 @@ drop policy if exists "hotels delete anon" on public.hotels;
 drop policy if exists "reservations read anon" on public.reservations;
 drop policy if exists "reservations insert anon" on public.reservations;
 drop policy if exists "reservations update anon" on public.reservations;
+drop policy if exists "exchange rates read anon" on public.exchange_rates;
+drop policy if exists "exchange rates insert anon" on public.exchange_rates;
+drop policy if exists "exchange rates delete anon" on public.exchange_rates;
 
 create policy "partners read anon" on public.partners for select using (true);
 create policy "partners insert anon" on public.partners for insert with check (true);
@@ -172,3 +184,6 @@ create policy "hotels delete anon" on public.hotels for delete using (true);
 create policy "reservations read anon" on public.reservations for select using (true);
 create policy "reservations insert anon" on public.reservations for insert with check (true);
 create policy "reservations update anon" on public.reservations for update using (true) with check (true);
+create policy "exchange rates read anon" on public.exchange_rates for select using (true);
+create policy "exchange rates insert anon" on public.exchange_rates for insert with check (true);
+create policy "exchange rates delete anon" on public.exchange_rates for delete using (true);
