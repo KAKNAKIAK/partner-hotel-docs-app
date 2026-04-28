@@ -1429,14 +1429,14 @@ th.num {
 }
 
 .voucher-hotel-section {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 304px;
-  align-items: center;
-  gap: 22px;
+  position: relative;
+  display: block;
+  min-height: 210px;
 }
 
 .voucher-hotel-section h3 {
   margin: 0 0 14px;
+  max-width: calc(100% - 150px);
   color: #152b4d;
   font-size: 27px;
   line-height: 1.15;
@@ -1470,34 +1470,36 @@ th.num {
 }
 
 .voucher-confirm-card {
-  border-radius: 14px;
-  padding: 20px 18px;
-  background: linear-gradient(135deg, #1c3158, #1d4f81);
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  min-width: 132px;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: #1c3158;
   color: #fff;
-  box-shadow: 0 12px 24px rgba(20, 42, 76, 0.18);
+  box-shadow: 0 8px 18px rgba(20, 42, 76, 0.16);
 }
 
 .voucher-confirm-card span {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 2px;
   color: #cbd5e1;
-  font-size: 10px;
+  font-size: 8px;
   font-weight: 900;
-  letter-spacing: 0.36em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
 }
 
 .voucher-confirm-card strong {
   display: block;
   font-family: Consolas, monospace;
-  font-size: 28px;
-  letter-spacing: 0.09em;
+  font-size: 15px;
+  letter-spacing: 0.06em;
 }
 
 .voucher-confirm-card p {
-  margin: 12px 0 0;
-  color: #dbeafe;
-  font-size: 11px;
+  display: none;
 }
 
 .voucher-detail-grid {
