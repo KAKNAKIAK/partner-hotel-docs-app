@@ -152,14 +152,14 @@ function roomLineBedText(line) {
   if (line.bedTypes?.twin) labels.push('트윈');
   if (line.bedTypes?.doubleOrTwin) labels.push('더블 OR 트윈');
   if (line.bedTypes?.extraBed) labels.push('+ EXTRA BED');
-  return labels.join(', ');
+  return labels.join('');
 }
 
 function summarizeRoomLines(reservation) {
   return getRoomLines(reservation)
     .map((line) => {
       const bedText = roomLineBedText(line);
-      const typeText = [line.roomType, bedText].filter(Boolean).join(' / ');
+      const typeText = [line.roomType, bedText].filter(Boolean).join(' ');
       return `${typeText || '객실'} ${line.roomCount || 0}실`;
     })
     .join(', ');
