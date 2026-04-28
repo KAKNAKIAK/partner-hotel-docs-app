@@ -1327,10 +1327,10 @@ th.num {
 
 .voucher-top {
   display: grid;
-  grid-template-columns: 198px 1fr 258px;
+  grid-template-columns: 132px 1fr 172px;
   align-items: center;
   gap: 14px;
-  min-height: 116px;
+  min-height: 96px;
   padding-top: 8px;
 }
 
@@ -1343,8 +1343,8 @@ th.num {
 .voucher-hotel-mark img,
 .voucher-company-mark img {
   display: block;
-  max-width: 192px;
-  max-height: 105px;
+  max-width: 128px;
+  max-height: 70px;
   object-fit: contain;
 }
 
@@ -1352,12 +1352,12 @@ th.num {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 87px;
-  height: 87px;
-  border-radius: 22px;
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
   background: #eff6ff;
   color: #1e3a8a;
-  font-size: 42px;
+  font-size: 28px;
   font-weight: 900;
 }
 
