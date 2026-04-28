@@ -1382,7 +1382,7 @@ function App() {
   }
 
   const tabs = [
-    ['invoice', '거래처 인보이스'],
+    ['invoice', '인보이스/바우처'],
     ['confirmation', '호텔 확정서'],
   ];
   const workflowSteps = [
