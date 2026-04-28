@@ -317,7 +317,7 @@ button { cursor: pointer; }
 
 .app-shell {
   display: grid;
-  grid-template-columns: minmax(480px, 560px) minmax(0, 1fr) minmax(260px, 286px);
+  grid-template-columns: minmax(480px, 560px) minmax(0, 1fr) minmax(330px, 360px);
   gap: 12px;
   height: calc(100vh - 59px);
   max-width: 1720px;
@@ -1153,10 +1153,11 @@ th {
 }
 
 .metric-compact .metric-value {
-  overflow: hidden;
+  overflow: visible;
   font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-overflow: clip;
+  white-space: normal;
+  word-break: keep-all;
 }
 
 .metric-wide {
@@ -1888,7 +1889,7 @@ th {
   color: #fff;
 }
 
-@media (max-width: 1380px) {
+@media (max-width: 1280px) {
   body {
     overflow: auto;
   }
