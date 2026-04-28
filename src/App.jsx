@@ -614,8 +614,9 @@ function App() {
     const templates = {
       room: { label: '객실 요금', unitPrice: 0, quantity: roomCount, nights },
       late: { label: '레이트 체크아웃', unitPrice: 0, quantity: roomCount, nights: 1 },
-      breakfast: { label: '조식 추가 비용', unitPrice: 0, quantity: adultCount, nights: 1 },
-      custom: { label: '추가 요금', unitPrice: 0, quantity: 1, nights: 1 },
+      breakfast: { label: '추가조식', unitPrice: 0, quantity: adultCount, nights: 1 },
+      extraBed: { label: '엑스트라베드', unitPrice: 0, quantity: roomCount, nights },
+      custom: { label: '기타', unitPrice: 0, quantity: 1, nights: 1 },
     };
     patch({ charges: [...reservation.charges, { id: makeId(), ...(templates[type] || templates.custom) }] });
   }
@@ -1176,7 +1177,8 @@ function App() {
               <div className="template-row">
                 <button className="btn btn-small" type="button" onClick={() => addCharge('room')}>객실</button>
                 <button className="btn btn-small" type="button" onClick={() => addCharge('late')}>레이트</button>
-                <button className="btn btn-small" type="button" onClick={() => addCharge('breakfast')}>조식</button>
+                <button className="btn btn-small" type="button" onClick={() => addCharge('breakfast')}>추가조식</button>
+                <button className="btn btn-small" type="button" onClick={() => addCharge('extraBed')}>엑스트라베드</button>
                 <button className="btn btn-small" type="button" onClick={() => addCharge('custom')}>기타</button>
               </div>
               <div className="charge-list">
