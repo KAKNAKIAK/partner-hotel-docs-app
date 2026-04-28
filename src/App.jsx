@@ -101,6 +101,7 @@ function emptyRoomLine(roomType = '', roomCount = 1) {
       double: false,
       twin: false,
       doubleOrTwin: false,
+      extraBed: false,
     },
     roomCount,
   };
@@ -115,6 +116,7 @@ function normalizeRoomLine(line, fallbackRoomType = '', fallbackRoomCount = 1) {
       double: Boolean(bedTypes.double),
       twin: Boolean(bedTypes.twin),
       doubleOrTwin: Boolean(bedTypes.doubleOrTwin),
+      extraBed: Boolean(bedTypes.extraBed),
     },
     roomCount: Number(line?.roomCount || fallbackRoomCount || 1),
   };
@@ -132,6 +134,7 @@ function roomLineBedText(line) {
   if (line.bedTypes?.double) labels.push('더블');
   if (line.bedTypes?.twin) labels.push('트윈');
   if (line.bedTypes?.doubleOrTwin) labels.push('더블 OR 트윈');
+  if (line.bedTypes?.extraBed) labels.push('+ EXTRA BED');
   return labels.join(', ');
 }
 
@@ -1141,6 +1144,14 @@ function App() {
                             onChange={(event) => updateRoomLineBedType(line.id, 'doubleOrTwin', event.target.checked)}
                           />
                           더블 OR 트윈
+                        </label>
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={line.bedTypes.extraBed}
+                            onChange={(event) => updateRoomLineBedType(line.id, 'extraBed', event.target.checked)}
+                          />
+                          EXTRA BED
                         </label>
                       </div>
                       <NumberInput label="객실 수" value={line.roomCount} onChange={(value) => updateRoomLine(line.id, { roomCount: value })} />
