@@ -487,6 +487,7 @@ function App() {
   const [activeStep, setActiveStep] = useState('source');
   const [saveState, setSaveState] = useState('');
   const [masterOpen, setMasterOpen] = useState(false);
+  const [masterInitialTab, setMasterInitialTab] = useState('hotels');
   const [checkInError, setCheckInError] = useState('');
   const [currentFileHandle, setCurrentFileHandle] = useState(null);
   const [currentFileId, setCurrentFileId] = useState('');
@@ -498,19 +499,20 @@ function App() {
   const [exchangeSaveState, setExchangeSaveState] = useState('');
   const [phraseSnippets, setPhraseSnippets] = useState([]);
   const [phraseQuery, setPhraseQuery] = useState('');
+  const [phrasePickerOpen, setPhrasePickerOpen] = useState(false);
   const nightsInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const exchangeRateInputId = useId();
   const issueDateInputId = useId();
 
   useEffect(() => {
-    if (!masterOpen) return undefined;
+    if (!masterOpen && !phrasePickerOpen) return undefined;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [masterOpen]);
+  }, [masterOpen, phrasePickerOpen]);
 
   useEffect(() => {
     function closeRecentMenu(event) {
@@ -747,6 +749,7 @@ function App() {
     if (!phrase) return;
     setPhraseQuery(phrase.title || '자주쓰는 문구');
     patchField('invoiceRemark', phrase.content || '');
+    setPhrasePickerOpen(false);
   }
 
   function selectPartner(partner) {
@@ -1099,12 +1102,24 @@ function App() {
     ['charges', '3', '요금'],
     ['settlement', '4', '정산'],
   ];
+  const filteredPhraseSnippets = phraseSnippets.filter((phrase) => {
+    const keyword = phraseQuery.trim().toLowerCase();
+    if (!keyword) return true;
+    return `${phrase.title || ''} ${phrase.content || ''}`.toLowerCase().includes(keyword);
+  });
 
   return (
     <>
       <header className="app-topbar">
         <div className="header-title-cluster">
-          <button className="btn btn-master" type="button" onClick={() => setMasterOpen(true)}>
+          <button
+            className="btn btn-master"
+            type="button"
+            onClick={() => {
+              setMasterInitialTab('hotels');
+              setMasterOpen(true);
+            }}
+          >
             마스터 관리
           </button>
           <div className="brand">
@@ -1461,31 +1476,9 @@ function App() {
             <Step number="4" title="정산·안내">
               <div className="settlement-note">
                 <Field label="자주쓰는 문구">
-                  <div className="phrase-search-box">
-                    <input
-                      value={phraseQuery}
-                      onChange={(event) => setPhraseQuery(event.target.value)}
-                      placeholder="DB 문구 검색"
-                    />
-                    <div className="phrase-search-results">
-                      {phraseSnippets
-                        .filter((phrase) => {
-                          const keyword = phraseQuery.trim().toLowerCase();
-                          if (!keyword) return true;
-                          return `${phrase.title || ''} ${phrase.content || ''}`.toLowerCase().includes(keyword);
-                        })
-                        .slice(0, 6)
-                        .map((phrase) => (
-                          <button type="button" key={phrase.id} onClick={() => applyPhraseSnippet(phrase.id)}>
-                            <strong>{phrase.title || '자주쓰는 문구'}</strong>
-                            <span>{phrase.content || '저장된 내용 없음'}</span>
-                          </button>
-                        ))}
-                      {phraseSnippets.length === 0 && (
-                        <p>마스터 관리에서 자주쓰는 문구를 먼저 등록하세요.</p>
-                      )}
-                    </div>
-                  </div>
+                  <button className="phrase-load-button" type="button" onClick={() => setPhrasePickerOpen(true)}>
+                    {phraseQuery || 'DB 문구 검색/불러오기'}
+                  </button>
                 </Field>
                 <Field label="인보이스 안내 문구">
                   <textarea
@@ -1572,17 +1565,61 @@ function App() {
           </section>
         </aside>
       </main>
-      {masterOpen && <MasterDataManager onClose={() => setMasterOpen(false)} />}
+      {phrasePickerOpen && (
+        <div className="phrase-picker-overlay" role="dialog" aria-modal="true" aria-label="자주쓰는 문구 불러오기">
+          <div className="phrase-picker-modal">
+            <header className="phrase-picker-header">
+              <h2>자주쓰는 문구 불러오기</h2>
+              <button type="button" aria-label="닫기" onClick={() => setPhrasePickerOpen(false)}>×</button>
+            </header>
+            <input
+              className="phrase-picker-search"
+              value={phraseQuery}
+              onChange={(event) => setPhraseQuery(event.target.value)}
+              placeholder="이름으로 검색..."
+              autoFocus
+            />
+            <div className="phrase-picker-list">
+              {filteredPhraseSnippets.map((phrase) => (
+                <button type="button" key={phrase.id} onClick={() => applyPhraseSnippet(phrase.id)}>
+                  {phrase.title || '자주쓰는 문구'}
+                </button>
+              ))}
+              {phraseSnippets.length > 0 && filteredPhraseSnippets.length === 0 && (
+                <p>검색 결과가 없습니다.</p>
+              )}
+              {phraseSnippets.length === 0 && (
+                <p>마스터 관리에서 자주쓰는 문구를 먼저 등록하세요.</p>
+              )}
+            </div>
+            <footer className="phrase-picker-actions">
+              <button
+                className="btn btn-small"
+                type="button"
+                onClick={() => {
+                  setPhrasePickerOpen(false);
+                  setMasterInitialTab('phrases');
+                  setMasterOpen(true);
+                }}
+              >
+                ↗ 자주쓰는 문구 관리
+              </button>
+              <button className="btn btn-small" type="button" onClick={() => setPhrasePickerOpen(false)}>닫기</button>
+            </footer>
+          </div>
+        </div>
+      )}
+      {masterOpen && <MasterDataManager initialTab={masterInitialTab} onClose={() => setMasterOpen(false)} />}
     </>
   );
 }
 
-function MasterDataManager({ onClose }) {
+function MasterDataManager({ initialTab = 'hotels', onClose }) {
   const ciInputId = useId();
   const hotelViInputId = useId();
   const companyCiInputId = useId();
   const companySealInputId = useId();
-  const [activeTab, setActiveTab] = useState('hotels');
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [partners, setPartners] = useState([]);
   const [hotels, setHotels] = useState([]);
   const [countries, setCountries] = useState([]);
