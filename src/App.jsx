@@ -1189,9 +1189,9 @@ function App() {
   ];
   const workflowSteps = [
     ['source', '1', '기본정보'],
-    ['booking', '2', '호텔·예약'],
+    ['booking', '2', '예약정보'],
     ['charges', '3', '요금'],
-    ['settlement', '4', '정산'],
+    ['settlement', '4', '리마크'],
   ];
   const filteredPhraseSnippets = phraseSnippets.filter((phrase) => {
     const keyword = phraseQuery.trim().toLowerCase();
