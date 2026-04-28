@@ -3082,6 +3082,7 @@ function Confirmation({ reservation }) {
           <div className="voucher-title-block">
             <p>Reservation Document</p>
             <h2>Hotel Voucher</h2>
+            <em>호텔바우처</em>
             <span>{reservation.issueDate || todayDate()} · {reservation.senderName || reservation.companyName || 'NAEILTOUR'}</span>
           </div>
           <div className="voucher-company-mark">
