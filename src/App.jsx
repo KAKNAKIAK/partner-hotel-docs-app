@@ -24,9 +24,7 @@ import {
   listPartners,
   listPhraseSnippets,
   listRegions,
-  loadLatestReservation,
   loadLatestExchangeRate,
-  saveReservation,
   searchCompanyInfos,
   searchHotels,
   searchPartners,
@@ -269,6 +267,7 @@ function formatVoucherMealPlan(value) {
 
 const LOCAL_DOC_VERSION = 1;
 const RECENT_FILES_KEY = 'partner-hotel-docs-recent-files';
+const BROWSER_RESERVATION_KEY = 'partner-hotel-docs-last-reservation';
 const HANDLE_DB_NAME = 'partner-hotel-docs-files';
 const HANDLE_STORE_NAME = 'file-handles';
 
@@ -358,6 +357,22 @@ function readRecentFiles() {
 
 function writeRecentFiles(items) {
   localStorage.setItem(RECENT_FILES_KEY, JSON.stringify(items.slice(0, 8)));
+}
+
+function readBrowserReservation() {
+  try {
+    const item = JSON.parse(localStorage.getItem(BROWSER_RESERVATION_KEY) || 'null');
+    return item?.reservation || null;
+  } catch {
+    return null;
+  }
+}
+
+function writeBrowserReservation(reservation) {
+  localStorage.setItem(BROWSER_RESERVATION_KEY, JSON.stringify({
+    savedAt: new Date().toISOString(),
+    reservation,
+  }));
 }
 
 function openHandleDb() {
@@ -1134,19 +1149,15 @@ function App() {
   }
 
   function saveDraft() {
-    setSaveState('저장 중');
-    announceAction('Supabase 저장 중...', 'info');
-    saveReservation(reservation)
-      .then((saved) => {
-        setReservation((current) => ({ ...current, id: saved.id || current.id }));
-        setSaveState('Supabase 저장 완료');
-        announceAction('Supabase 저장 완료');
-      })
-      .catch((error) => {
-        console.error(error);
-        setSaveState('Supabase 저장 실패');
-        announceAction('Supabase 저장 실패', 'error');
-      });
+    try {
+      writeBrowserReservation(reservation);
+      setSaveState('브라우저 저장 완료');
+      announceAction('브라우저 저장 완료');
+    } catch (error) {
+      console.error(error);
+      setSaveState('브라우저 저장 실패');
+      announceAction('브라우저 저장 실패', 'error');
+    }
   }
 
   function resetLocalDocument() {
@@ -1225,6 +1236,7 @@ function App() {
         ],
       });
       await writeHtmlToHandle(handle, html);
+      writeBrowserReservation(reservation);
       const nextId = rememberRecentFile(handle.name, handle);
       setCurrentFileHandle(handle);
       setCurrentFileId(nextId);
@@ -1235,6 +1247,7 @@ function App() {
     }
 
     downloadLocalHtml(fileName, html);
+    writeBrowserReservation(reservation);
     rememberRecentFile(fileName, null);
     setCurrentFileName(fileName);
     setSaveState(`${fileName} 다운로드 완료`);
@@ -1250,6 +1263,7 @@ function App() {
 
       const html = buildLocalHtml(reservation);
       await writeHtmlToHandle(currentFileHandle, html);
+      writeBrowserReservation(reservation);
       const nextId = rememberRecentFile(currentFileHandle.name, currentFileHandle, currentFileId);
       setCurrentFileId(nextId);
       setCurrentFileName(currentFileHandle.name);
@@ -1365,18 +1379,15 @@ function App() {
   }
 
   function loadDraft() {
-    loadLatestReservation()
-      .then((saved) => {
-        if (!saved) {
-          alert('Supabase에 저장된 예약이 없습니다.');
-          return;
-        }
-        setReservation(normalizeReservation(saved));
-      })
-      .catch((error) => {
-        console.error(error);
-        alert('Supabase 예약 데이터를 불러오지 못했습니다.');
-      });
+    const saved = readBrowserReservation();
+    if (!saved) {
+      alert('브라우저에 저장된 예약이 없습니다.');
+      return;
+    }
+
+    setReservation(normalizeReservation(saved));
+    setSaveState('브라우저 예약 불러오기 완료');
+    announceAction('브라우저 예약 불러오기 완료');
   }
 
   const tabs = [

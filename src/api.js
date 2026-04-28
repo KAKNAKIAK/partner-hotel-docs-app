@@ -1,6 +1,7 @@
 import { supabaseFetch } from './supabaseClient.js';
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const browserReservationKey = 'partner-hotel-docs-last-reservation';
 
 function partnerFromRow(item) {
   return {
@@ -454,7 +455,11 @@ export async function saveReservation(reservation) {
 }
 
 export async function loadLatestReservation() {
-  const data = await supabaseFetch('reservations?select=*&order=updated_at.desc&limit=1');
-  if (!data.length) return null;
-  return { ...data[0].snapshot, id: data[0].id };
+  if (typeof localStorage === 'undefined') return null;
+  try {
+    const item = JSON.parse(localStorage.getItem(browserReservationKey) || 'null');
+    return item?.reservation || null;
+  } catch {
+    return null;
+  }
 }
