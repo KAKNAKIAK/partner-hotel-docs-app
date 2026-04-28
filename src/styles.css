@@ -46,7 +46,7 @@ button { cursor: pointer; }
   grid-template-columns: minmax(300px, auto) minmax(205px, 240px) minmax(150px, 172px) minmax(430px, 1fr);
   align-items: center;
   gap: 12px;
-  min-height: 72px;
+  min-height: 58px;
   padding: 10px 18px 10px 16px;
   border-bottom: 1px solid var(--line);
   background:
@@ -132,22 +132,12 @@ button { cursor: pointer; }
   display: grid;
   gap: 3px;
   width: 172px;
-  min-height: 62px;
-  border: 1px solid #dbe4f0;
-  border-radius: 10px;
-  padding: 6px;
-  background: #f8fafc;
 }
 
 .header-exchange {
   display: flex;
   align-items: end;
   gap: 7px;
-  min-height: 62px;
-  border: 1px solid #dbe4f0;
-  border-radius: 10px;
-  padding: 6px;
-  background: #f8fafc;
 }
 
 .header-exchange label {
@@ -329,7 +319,7 @@ button { cursor: pointer; }
   display: grid;
   grid-template-columns: minmax(480px, 560px) minmax(0, 1fr) minmax(260px, 286px);
   gap: 12px;
-  height: calc(100vh - 73px);
+  height: calc(100vh - 59px);
   max-width: 1720px;
   margin: 0 auto;
   padding: 12px;
