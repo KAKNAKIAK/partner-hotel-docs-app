@@ -1432,11 +1432,15 @@ th.num {
   position: relative;
   display: block;
   min-height: 0;
-  padding-right: 170px;
+  padding: 16px 170px 16px 16px;
+}
+
+.voucher-hotel-section .voucher-section-kicker {
+  margin-bottom: 10px;
 }
 
 .voucher-hotel-section h3 {
-  margin: 0 0 14px;
+  margin: 0 0 8px;
   max-width: 100%;
   color: #152b4d;
   font-size: 27px;
@@ -1445,13 +1449,13 @@ th.num {
 
 .voucher-info-list {
   display: grid;
-  gap: 12px;
+  gap: 8px;
   margin: 0;
 }
 
 .voucher-info-list div {
   display: grid;
-  gap: 4px;
+  gap: 2px;
 }
 
 .voucher-info-list dt,
@@ -1468,6 +1472,7 @@ th.num {
   color: #111827;
   font-size: 14px;
   font-weight: 900;
+  line-height: 1.25;
 }
 
 .voucher-confirm-card {
