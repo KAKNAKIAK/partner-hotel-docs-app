@@ -27,7 +27,32 @@ function hotelFromRow(item) {
     phone: item.phone || '',
     defaultNotice: item.default_notice || '',
     defaultMealPlan: item.default_meal_plan || '',
+    defaultCheckInTime: item.default_check_in_time || '',
+    defaultCheckOutTime: item.default_check_out_time || '',
     rooms: Array.isArray(item.rooms) ? item.rooms : [],
+  };
+}
+
+function isMissingHotelTimeColumn(error) {
+  return String(error?.message || error).includes('default_check_');
+}
+
+function hotelPayload(hotel, includeDefaultTimes = true) {
+  return {
+    name: hotel.name,
+    korean_name: hotel.koreanName || null,
+    country: hotel.country || null,
+    city: hotel.city || null,
+    logo_url: hotel.logoUrl || null,
+    address: hotel.address || null,
+    phone: hotel.phone || null,
+    default_notice: hotel.defaultNotice || null,
+    default_meal_plan: hotel.defaultMealPlan || null,
+    ...(includeDefaultTimes ? {
+      default_check_in_time: hotel.defaultCheckInTime || null,
+      default_check_out_time: hotel.defaultCheckOutTime || null,
+    } : {}),
+    rooms: hotel.rooms || [],
   };
 }
 
@@ -299,42 +324,43 @@ export async function searchHotels(query = '') {
 }
 
 export async function createHotel(hotel) {
-  const data = await supabaseFetch('hotels?select=*', {
-    method: 'POST',
-    body: JSON.stringify({
-      name: hotel.name,
-      korean_name: hotel.koreanName || null,
-      country: hotel.country || null,
-      city: hotel.city || null,
-      logo_url: hotel.logoUrl || null,
-      address: hotel.address || null,
-      phone: hotel.phone || null,
-      default_notice: hotel.defaultNotice || null,
-      default_meal_plan: hotel.defaultMealPlan || null,
-      rooms: hotel.rooms || [],
-    }),
-  });
-  return hotelFromRow(data[0]);
+  try {
+    const data = await supabaseFetch('hotels?select=*', {
+      method: 'POST',
+      body: JSON.stringify(hotelPayload(hotel)),
+    });
+    return hotelFromRow(data[0]);
+  } catch (error) {
+    if (!isMissingHotelTimeColumn(error)) throw error;
+    const data = await supabaseFetch('hotels?select=*', {
+      method: 'POST',
+      body: JSON.stringify(hotelPayload(hotel, false)),
+    });
+    return { ...hotelFromRow(data[0]), defaultCheckInTime: hotel.defaultCheckInTime || '', defaultCheckOutTime: hotel.defaultCheckOutTime || '' };
+  }
 }
 
 export async function updateHotel(hotel) {
-  const data = await supabaseFetch(`hotels?id=eq.${hotel.id}&select=*`, {
-    method: 'PATCH',
-    body: JSON.stringify({
-      name: hotel.name,
-      korean_name: hotel.koreanName || null,
-      country: hotel.country || null,
-      city: hotel.city || null,
-      logo_url: hotel.logoUrl || null,
-      address: hotel.address || null,
-      phone: hotel.phone || null,
-      default_notice: hotel.defaultNotice || null,
-      default_meal_plan: hotel.defaultMealPlan || null,
-      rooms: hotel.rooms || [],
-      updated_at: new Date().toISOString(),
-    }),
-  });
-  return hotelFromRow(data[0]);
+  try {
+    const data = await supabaseFetch(`hotels?id=eq.${hotel.id}&select=*`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        ...hotelPayload(hotel),
+        updated_at: new Date().toISOString(),
+      }),
+    });
+    return hotelFromRow(data[0]);
+  } catch (error) {
+    if (!isMissingHotelTimeColumn(error)) throw error;
+    const data = await supabaseFetch(`hotels?id=eq.${hotel.id}&select=*`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        ...hotelPayload(hotel, false),
+        updated_at: new Date().toISOString(),
+      }),
+    });
+    return { ...hotelFromRow(data[0]), defaultCheckInTime: hotel.defaultCheckInTime || '', defaultCheckOutTime: hotel.defaultCheckOutTime || '' };
+  }
 }
 
 export async function deleteHotel(id) {

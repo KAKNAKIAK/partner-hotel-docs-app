@@ -597,6 +597,8 @@ function App() {
       hotelRooms: hotel.rooms || [],
       roomType: hotel.rooms?.[0] || '',
       roomLines: [emptyRoomLine(hotel.rooms?.[0] || '', 1)],
+      checkInTime: hotel.defaultCheckInTime || '',
+      checkOutTime: hotel.defaultCheckOutTime || '',
       mealPlan: hotel.defaultMealPlan,
       customerNotice: hotel.defaultNotice,
     });
@@ -1555,6 +1557,8 @@ function MasterDataManager({ onClose }) {
       logoUrl: '',
       defaultNotice: '',
       defaultMealPlan: '',
+      defaultCheckInTime: '',
+      defaultCheckOutTime: '',
       rooms: [],
     };
     setMasterState('호텔 저장 중');
@@ -1575,6 +1579,11 @@ function MasterDataManager({ onClose }) {
   function updateSelectedHotel(changes) {
     if (!selectedHotel) return;
     setHotels((current) => current.map((hotel) => (hotel.id === selectedHotel.id ? { ...hotel, ...changes } : hotel)));
+  }
+
+  function toggleSelectedHotelTime(key, value) {
+    if (!selectedHotel) return;
+    updateSelectedHotel({ [key]: selectedHotel[key] === value ? '' : value });
   }
 
   function renameHotel(hotel) {
@@ -2322,6 +2331,38 @@ function MasterDataManager({ onClose }) {
                     <button className="btn btn-primary btn-small" type="button" onClick={saveSelectedHotel}>수정</button>
                     <button className="btn btn-danger btn-small" type="button" onClick={deleteSelectedHotel}>삭제</button>
                   </div>
+                </div>
+              </div>
+              <div className="master-card hotel-time-card">
+                <header>체크인·체크아웃</header>
+                <div className="hotel-time-body">
+                  <div className="time-checks master-time-checks">
+                    <span>체크인</span>
+                    {['14시', '15시'].map((time) => (
+                      <label key={time}>
+                        <input
+                          type="checkbox"
+                          checked={selectedHotel?.defaultCheckInTime === time}
+                          onChange={() => toggleSelectedHotelTime('defaultCheckInTime', time)}
+                        />
+                        {time}
+                      </label>
+                    ))}
+                  </div>
+                  <div className="time-checks master-time-checks">
+                    <span>체크아웃</span>
+                    {['11시', '12시', '18시'].map((time) => (
+                      <label key={time}>
+                        <input
+                          type="checkbox"
+                          checked={selectedHotel?.defaultCheckOutTime === time}
+                          onChange={() => toggleSelectedHotelTime('defaultCheckOutTime', time)}
+                        />
+                        {time}
+                      </label>
+                    ))}
+                  </div>
+                  <button className="btn btn-primary btn-small" type="button" onClick={saveSelectedHotel}>저장</button>
                 </div>
               </div>
               <div className="master-card room-card">

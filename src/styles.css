@@ -1320,6 +1320,30 @@ th {
   flex: 0 0 auto;
 }
 
+.hotel-time-card {
+  flex: 0 0 auto;
+}
+
+.hotel-time-body {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.hotel-time-body .btn {
+  justify-self: end;
+  width: 92px;
+}
+
+.master-time-checks {
+  grid-template-columns: auto repeat(3, minmax(54px, 1fr));
+  background: #fff;
+}
+
+.master-time-checks:first-child {
+  grid-template-columns: auto repeat(2, minmax(54px, 1fr));
+}
+
 .hotel-detail-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

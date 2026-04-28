@@ -54,6 +54,8 @@ create table if not exists public.hotels (
   phone text,
   default_notice text,
   default_meal_plan text,
+  default_check_in_time text,
+  default_check_out_time text,
   rooms text[] not null default '{}',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -111,6 +113,8 @@ alter table public.phrase_snippets add column if not exists title text;
 alter table public.phrase_snippets add column if not exists content text;
 alter table public.hotels add column if not exists korean_name text;
 alter table public.hotels add column if not exists logo_url text;
+alter table public.hotels add column if not exists default_check_in_time text;
+alter table public.hotels add column if not exists default_check_out_time text;
 alter table public.hotels add column if not exists rooms text[] not null default '{}';
 
 drop policy if exists "partners read anon" on public.partners;
