@@ -235,7 +235,7 @@ function mealDayText(day) {
 }
 
 function mealPlanFromDays(days) {
-  return days.map(mealDayText).join('/');
+  return days.map(mealDayText).join('-');
 }
 
 function normalizeMealPlanDays(days, nights) {
@@ -260,13 +260,11 @@ function stayDateTime(dateValue, timeValue) {
 
 function formatVoucherDate(dateValue) {
   const normalized = normalizeDateInput(dateValue);
-  if (!normalized) return dateValue || '-';
-  const date = new Date(`${normalized}T00:00:00Z`);
-  const year = date.getUTCFullYear();
-  const month = date.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
-  const day = date.getUTCDate();
-  const weekday = date.toLocaleString('en-US', { weekday: 'short', timeZone: 'UTC' });
-  return `${year} ${month} ${day} (${weekday})`;
+  return normalized || dateValue || '-';
+}
+
+function formatVoucherMealPlan(value) {
+  return String(value || '-').replaceAll('/', '-');
 }
 
 const LOCAL_DOC_VERSION = 1;
@@ -3239,7 +3237,6 @@ function Confirmation({ reservation }) {
               const bedText = roomLineBedText(line);
               return (
                 <div className="voucher-room-card" key={line.id || `room-${index}`}>
-                  <p>Room {index + 1}</p>
                   <div>
                     <span>Room Type</span>
                     <strong>{line.roomType || '-'}</strong>
@@ -3250,7 +3247,7 @@ function Confirmation({ reservation }) {
                   </div>
                   <div>
                     <span>Meal Plan</span>
-                    <strong className="meal">{reservation.mealPlan || '-'}</strong>
+                    <strong className="meal">{formatVoucherMealPlan(reservation.mealPlan)}</strong>
                   </div>
                 </div>
               );
