@@ -356,6 +356,12 @@ button { cursor: pointer; }
   color: #fff;
 }
 
+.btn-primary:hover {
+  border-color: #172033;
+  background: #172033;
+  color: #fff;
+}
+
 .btn-danger {
   border-color: #fecdd3;
   background: #fff1f2;
