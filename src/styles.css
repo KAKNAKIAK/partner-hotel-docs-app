@@ -397,6 +397,13 @@ button { cursor: pointer; }
   align-items: start;
 }
 
+.passenger-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
+}
+
 .room-lines {
   display: grid;
   gap: 7px;
@@ -1616,6 +1623,7 @@ th {
   .grid-3,
   .grid-charge,
   .booking-date-row,
+  .passenger-row,
   .room-line,
   .doc-grid {
     grid-template-columns: 1fr;
