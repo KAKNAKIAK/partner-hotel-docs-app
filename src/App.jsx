@@ -2946,7 +2946,7 @@ function Invoice({ reservation, foreignTotal, krwTotal }) {
     .filter((item) => item.invoice && String(item.content || '').trim());
   return (
     <article className="document">
-      <div className="document-content">
+      <div className="document-content invoice-content">
       <div className="invoice-head">
         <div>
           <div className="doc-kicker">Payment Request</div>

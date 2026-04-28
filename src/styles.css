@@ -1053,7 +1053,13 @@ select:focus {
 }
 
 .document-content {
+  min-height: calc(1123px - 88px);
   transform-origin: top left;
+}
+
+.invoice-content {
+  display: flex;
+  flex-direction: column;
 }
 
 .doc-kicker {
@@ -1225,6 +1231,7 @@ th.num {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
   gap: 18px;
+  margin-top: auto;
   min-height: 0;
 }
 
@@ -2264,6 +2271,7 @@ th.num {
 
   .document-content {
     width: calc(100% / var(--print-scale));
+    min-height: calc(297mm - 88px);
     transform: scale(var(--print-scale));
   }
 
