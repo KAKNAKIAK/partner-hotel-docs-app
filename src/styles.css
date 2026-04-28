@@ -317,7 +317,7 @@ button { cursor: pointer; }
 
 .app-shell {
   display: grid;
-  grid-template-columns: minmax(440px, 500px) minmax(680px, 1fr);
+  grid-template-columns: minmax(440px, 500px) minmax(620px, 1fr) minmax(310px, 340px);
   gap: 12px;
   height: calc(100vh - 59px);
   max-width: 1720px;
@@ -1070,6 +1070,72 @@ th {
   letter-spacing: 0.08em;
 }
 
+.side-panel {
+  position: sticky;
+  top: 84px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-self: stretch;
+  height: 100%;
+  overflow: hidden;
+}
+
+.side-body { padding: 14px; }
+
+.audit-summary {
+  display: grid;
+  gap: 8px;
+}
+
+.audit-meta-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.metric {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--surface-soft);
+}
+
+.metric-value {
+  margin: 2px 0 0;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.metric-compact {
+  min-width: 0;
+  padding: 8px 7px;
+}
+
+.metric-compact .metric-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metric-compact .metric-value {
+  overflow: visible;
+  font-size: 12px;
+  text-overflow: clip;
+  white-space: normal;
+  word-break: keep-all;
+}
+
+.metric-wide {
+  background: var(--navy);
+  color: #fff;
+}
+
+.audit-pdf-btn {
+  width: 100%;
+  margin-top: 12px;
+}
+
 .master-overlay {
   position: fixed;
   inset: 0;
@@ -1761,6 +1827,13 @@ th {
   .app-shell {
     grid-template-columns: minmax(420px, 500px) minmax(0, 1fr);
     height: auto;
+  }
+
+  .side-panel {
+    position: static;
+    grid-column: 1 / -1;
+    height: auto;
+    overflow: visible;
   }
 }
 

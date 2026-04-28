@@ -1523,6 +1523,28 @@ function App() {
             />
           </div>
         </section>
+
+        <aside className="side-panel">
+          <section className="panel summary-panel">
+            <div className="side-body">
+              <div className="audit-summary">
+                <div className="audit-meta-row">
+                  <Metric label="예약자명" value={reservation.leadGuest || '-'} compact />
+                  <Metric label="체크인날짜" value={reservation.checkIn || '-'} compact />
+                  <Metric label="박수" value={`${autoNights}박`} compact />
+                </div>
+                <Metric
+                  label="청구액"
+                  value={`${money(foreignTotal, reservation.currency)} / ${krw(krwTotal)}`}
+                  wide
+                />
+              </div>
+              <button className="btn btn-primary audit-pdf-btn" type="button" onClick={() => window.print()}>
+                PDF 파일
+              </button>
+            </div>
+          </section>
+        </aside>
       </main>
       {masterOpen && <MasterDataManager onClose={() => setMasterOpen(false)} />}
     </>
@@ -2673,6 +2695,15 @@ function MasterColumn({
         <input value={inputValue} onChange={(event) => onInput(event.target.value)} placeholder={inputPlaceholder} />
         <button className="master-add" type="button" onClick={onAdd}>+</button>
       </footer>
+    </div>
+  );
+}
+
+function Metric({ label, value, wide = false, compact = false }) {
+  return (
+    <div className={`metric ${wide ? 'metric-wide' : ''} ${compact ? 'metric-compact' : ''}`}>
+      <p className="metric-label">{label}</p>
+      <p className="metric-value">{value}</p>
     </div>
   );
 }
