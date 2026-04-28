@@ -1343,6 +1343,7 @@ th.num {
 
 .audit-pdf-btn {
   width: 100%;
+  min-height: 72px;
   margin-top: 12px;
 }
 
