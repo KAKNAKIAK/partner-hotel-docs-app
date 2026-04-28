@@ -538,11 +538,7 @@ function Field({ label, children, className = '' }) {
 function Step({ number, title, children }) {
   return (
     <section className="work-step">
-      <div className="step-index">{number}</div>
-      <div>
-        <h3 className="step-title">{title}</h3>
-        {children}
-      </div>
+      {children}
     </section>
   );
 }
@@ -1105,6 +1101,7 @@ function App() {
   }
 
   function updateRoomLineBedType(id, key, checked) {
+    const exclusiveBedKeys = ['double', 'twin', 'doubleOrTwin'];
     syncRoomLinePatch(
       roomLines.map((line) =>
         line.id === id
@@ -1112,6 +1109,9 @@ function App() {
               ...line,
               bedTypes: {
                 ...line.bedTypes,
+                ...(exclusiveBedKeys.includes(key) && checked
+                  ? { double: false, twin: false, doubleOrTwin: false }
+                  : {}),
                 [key]: checked,
               },
             }
@@ -3174,9 +3174,9 @@ function Confirmation({ reservation }) {
     .filter((item) => item.confirmation && String(item.content || '').trim());
   const roomLines = getRoomLines(reservation).filter((line) => line.roomType || roomLineBedText(line));
   const pax = [
-    reservation.adultCount ? `ADT ${reservation.adultCount}` : '',
-    reservation.childCount ? `CHD ${reservation.childCount}` : '',
-    reservation.infantCount ? `INF ${reservation.infantCount}` : '',
+    reservation.adultCount ? `성인 ${reservation.adultCount}` : '',
+    reservation.childCount ? `소아 ${reservation.childCount}` : '',
+    reservation.infantCount ? `유아 ${reservation.infantCount}` : '',
   ].filter(Boolean).join(' / ');
   const totalGuests = Number(reservation.adultCount || 0) + Number(reservation.childCount || 0) + Number(reservation.infantCount || 0);
   const hotelInitial = String(reservation.hotelName || 'H').trim().slice(0, 1).toUpperCase();
@@ -3258,10 +3258,9 @@ function Confirmation({ reservation }) {
         <section className="voucher-section">
           <p className="voucher-section-kicker">Guest Information</p>
           <div className="voucher-guest-row">
-            <span>1</span>
             <strong>{reservation.leadGuest || '-'}</strong>
+            <div className="voucher-pax-pill">{pax || `총 ${totalGuests || 0}명`}</div>
           </div>
-          <div className="voucher-pax-pill">Total: {pax || `${totalGuests || 0} Guest`}</div>
         </section>
 
         {(confirmationNotices.length > 0 || reservation.customerNotice) && (
