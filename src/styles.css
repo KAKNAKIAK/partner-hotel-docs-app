@@ -2248,9 +2248,18 @@ th.num {
     width: 210mm;
     min-height: 297mm;
     margin: 0;
+    padding: 44px;
     box-shadow: none;
     page-break-after: always;
     transform: none;
+  }
+
+  .invoice-head {
+    grid-template-columns: minmax(0, 1fr) 250px !important;
+  }
+
+  .doc-grid {
+    grid-template-columns: 1fr 1fr !important;
   }
 
   th,
