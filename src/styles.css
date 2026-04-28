@@ -1168,6 +1168,7 @@ th {
   background: var(--navy);
   color: #fff;
   font-weight: 900;
+  text-align: center;
 }
 
 .num {
@@ -1226,6 +1227,8 @@ th {
   bottom: 14px;
   max-width: calc(100% - 310px);
   min-width: 0;
+  font-size: 15px;
+  line-height: 1.75;
 }
 
 .invoice-seal {
