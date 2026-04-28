@@ -1288,6 +1288,8 @@ th.num {
   align-items: end;
   gap: 18px;
   margin-top: auto;
+  border-color: transparent;
+  background: transparent;
   min-height: 0;
 }
 
