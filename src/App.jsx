@@ -570,6 +570,35 @@ function App() {
   }, []);
 
   useEffect(() => {
+    function fitPrintPage() {
+      document.documentElement.style.setProperty('--print-scale', '1');
+      const page = document.querySelector('.document');
+      const content = document.querySelector('.document-content');
+      if (!page || !content) return;
+      const pageStyle = window.getComputedStyle(page);
+      const paddingTop = Number.parseFloat(pageStyle.paddingTop) || 0;
+      const paddingBottom = Number.parseFloat(pageStyle.paddingBottom) || 0;
+      const availableHeight = 1123 - paddingTop - paddingBottom;
+      const contentHeight = content.scrollHeight;
+      const scale = contentHeight > availableHeight
+        ? Math.min(1, availableHeight / contentHeight)
+        : 1;
+      document.documentElement.style.setProperty('--print-scale', scale.toFixed(3));
+    }
+
+    function resetPrintPage() {
+      document.documentElement.style.setProperty('--print-scale', '1');
+    }
+
+    window.addEventListener('beforeprint', fitPrintPage);
+    window.addEventListener('afterprint', resetPrintPage);
+    return () => {
+      window.removeEventListener('beforeprint', fitPrintPage);
+      window.removeEventListener('afterprint', resetPrintPage);
+    };
+  }, []);
+
+  useEffect(() => {
     let ignore = false;
     loadLatestExchangeRate(reservation.currency || 'USD')
       .then((savedRate) => {
@@ -2917,6 +2946,7 @@ function Invoice({ reservation, foreignTotal, krwTotal }) {
     .filter((item) => item.invoice && String(item.content || '').trim());
   return (
     <article className="document">
+      <div className="document-content">
       <div className="invoice-head">
         <div>
           <div className="doc-kicker">Payment Request</div>
@@ -2979,6 +3009,7 @@ function Invoice({ reservation, foreignTotal, krwTotal }) {
           <img className="invoice-seal" src={reservation.companySealUrl} alt="" />
         )}
       </div>
+      </div>
     </article>
   );
 }
@@ -2995,6 +3026,7 @@ function Confirmation({ reservation }) {
 
   return (
     <article className="document">
+      <div className="document-content">
       <div className="doc-kicker">Reservation Document</div>
       <h2 className="doc-title">HOTEL CONFIRMATION</h2>
       <div className="confirm-hero">
@@ -3020,6 +3052,7 @@ function Confirmation({ reservation }) {
       {reservation.customerNotice && (
         <div className="notice-box"><strong>안내사항</strong><br />{reservation.customerNotice}</div>
       )}
+      </div>
     </article>
   );
 }

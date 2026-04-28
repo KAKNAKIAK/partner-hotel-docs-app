@@ -16,6 +16,7 @@
   --red: #b42318;
   --red-soft: #fff1f2;
   --shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  --print-scale: 1;
   font-family: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
 }
 
@@ -1051,6 +1052,10 @@ select:focus {
   transform-origin: top center;
 }
 
+.document-content {
+  transform-origin: top left;
+}
+
 .doc-kicker {
   color: var(--muted);
   font-size: 11px;
@@ -1216,8 +1221,11 @@ th.num {
 }
 
 .invoice-payment-box {
-  position: relative;
-  min-height: 250px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 18px;
+  min-height: 0;
 }
 
 .invoice-remark-box {
@@ -1226,10 +1234,6 @@ th.num {
 }
 
 .invoice-payment-box > div {
-  position: absolute;
-  left: 14px;
-  bottom: 14px;
-  max-width: calc(100% - 310px);
   min-width: 0;
   font-size: 15px;
   line-height: 1.75;
@@ -1237,11 +1241,11 @@ th.num {
 
 .invoice-seal {
   display: block;
-  position: absolute;
-  right: 14px;
-  bottom: 14px;
   width: 258px;
-  height: 258px;
+  height: auto;
+  max-height: 258px;
+  justify-self: end;
+  align-self: end;
   object-fit: contain;
   object-position: right bottom;
 }
@@ -2246,12 +2250,21 @@ th.num {
 
   .document {
     width: 210mm;
-    min-height: 297mm;
+    height: 297mm;
+    min-height: 0;
     margin: 0;
     padding: 44px;
+    overflow: hidden;
+    box-sizing: border-box;
     box-shadow: none;
-    page-break-after: always;
+    page-break-after: auto;
+    break-after: auto;
     transform: none;
+  }
+
+  .document-content {
+    width: calc(100% / var(--print-scale));
+    transform: scale(var(--print-scale));
   }
 
   .invoice-head {
