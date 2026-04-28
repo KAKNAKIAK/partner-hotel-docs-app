@@ -149,6 +149,10 @@ function totalRoomCount(reservation) {
   return getRoomLines(reservation).reduce((sum, line) => sum + Number(line.roomCount || 0), 0) || Number(reservation.roomCount || 1) || 1;
 }
 
+function stayDateTime(dateValue, timeValue) {
+  return [dateValue, timeValue].filter(Boolean).join(' ');
+}
+
 const LOCAL_DOC_VERSION = 1;
 const RECENT_FILES_KEY = 'partner-hotel-docs-recent-files';
 const HANDLE_DB_NAME = 'partner-hotel-docs-files';
@@ -493,10 +497,10 @@ function App() {
       items.push('조식 포함 조건인데 조식 추가 비용 라인이 있습니다.');
     }
     if (
-      String(reservation.lateCheckout || '').trim() &&
+      String(reservation.checkOutTime || '').trim() === '18시' &&
       !reservation.charges.some((line) => String(line.label).includes('레이트'))
     ) {
-      items.push('레이트 체크아웃 시간이 있지만 레이트 체크아웃 요금 라인이 없습니다.');
+      items.push('체크아웃 18시 선택 상태인데 레이트 체크아웃 요금 라인이 없습니다.');
     }
     return items;
   }, [autoNights, reservation]);
@@ -662,6 +666,10 @@ function App() {
   function removeRoomLine(id) {
     if (roomLines.length <= 1) return;
     syncRoomLinePatch(roomLines.filter((line) => line.id !== id));
+  }
+
+  function toggleTimeField(key, value) {
+    patchField(key, reservation[key] === value ? '' : value);
   }
 
   function saveDraft() {
@@ -1058,6 +1066,34 @@ function App() {
                     <input className="readonly-input" value={reservation.checkOut || ''} placeholder="박수 입력 시 자동 계산" readOnly />
                   </Field>
                 </div>
+                <div className="stay-time-row span-2">
+                  <div className="time-checks">
+                    <span>체크인</span>
+                    {['14시', '15시'].map((time) => (
+                      <label key={time}>
+                        <input
+                          type="checkbox"
+                          checked={reservation.checkInTime === time}
+                          onChange={() => toggleTimeField('checkInTime', time)}
+                        />
+                        {time}
+                      </label>
+                    ))}
+                  </div>
+                  <div className="time-checks">
+                    <span>체크아웃</span>
+                    {['11시', '12시', '18시'].map((time) => (
+                      <label key={time}>
+                        <input
+                          type="checkbox"
+                          checked={reservation.checkOutTime === time}
+                          onChange={() => toggleTimeField('checkOutTime', time)}
+                        />
+                        {time}
+                      </label>
+                    ))}
+                  </div>
+                </div>
                 <div className="room-lines span-2">
                   <div className="room-lines-header">
                     <span>객실 구성</span>
@@ -1118,7 +1154,6 @@ function App() {
                     </div>
                   ))}
                 </div>
-                <TextInput label="레이트 체크아웃" value={reservation.lateCheckout} onChange={(value) => patchField('lateCheckout', value)} />
               </div>
             </Step>
             )}
@@ -2421,7 +2456,7 @@ function Invoice({ reservation, foreignTotal, krwTotal }) {
         <DocBox label="발신 / 작성일" value={`${reservation.senderName}\n${reservation.issueDate}`} />
         <DocBox label="예약명" value={reservation.leadGuest} />
         <DocBox label="호텔" value={reservation.hotelName} />
-        <DocBox label="투숙일" value={`${reservation.checkIn} - ${reservation.checkOut} / ${reservation.statedNights}박`} />
+        <DocBox label="투숙일" value={`${stayDateTime(reservation.checkIn, reservation.checkInTime)} - ${stayDateTime(reservation.checkOut, reservation.checkOutTime)} / ${reservation.statedNights}박`} />
         <DocBox label="객실" value={roomSummary} />
       </div>
       <table>
@@ -2485,14 +2520,13 @@ function Confirmation({ reservation }) {
       <div className="doc-grid">
         <DocBox label="예약자" value={reservation.leadGuest} />
         <DocBox label="투숙 인원" value={pax || '-'} />
-        <DocBox label="체크인" value={reservation.checkIn} />
-        <DocBox label="체크아웃" value={reservation.checkOut} />
+        <DocBox label="체크인" value={stayDateTime(reservation.checkIn, reservation.checkInTime)} />
+        <DocBox label="체크아웃" value={stayDateTime(reservation.checkOut, reservation.checkOutTime)} />
         <DocBox label="숙박" value={`${reservation.statedNights}박`} />
         <DocBox label="객실" value={roomSummary} />
         <DocBox label="식사 조건" value={reservation.mealPlan} />
         <DocBox label="결제 조건" value={reservation.paymentTerms} />
       </div>
-      {reservation.lateCheckout && <div className="notice-box"><strong>레이트 체크아웃</strong><br />{reservation.lateCheckout}까지로 기록되어 있습니다.</div>}
       <div className="notice-box"><strong>안내사항</strong><br />{reservation.customerNotice}</div>
     </article>
   );
