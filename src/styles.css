@@ -1432,24 +1432,24 @@ th.num {
   position: relative;
   display: block;
   min-height: 0;
-  padding: 16px 170px 16px 16px;
+  padding: 12px 158px 10px 14px;
 }
 
 .voucher-hotel-section .voucher-section-kicker {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .voucher-hotel-section h3 {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   max-width: 100%;
   color: #152b4d;
-  font-size: 27px;
-  line-height: 1.15;
+  font-size: 25px;
+  line-height: 1.08;
 }
 
 .voucher-info-list {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   margin: 0;
 }
 
@@ -1461,7 +1461,7 @@ th.num {
 .voucher-info-list dt,
 .voucher-room-card span {
   color: #718096;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 900;
   letter-spacing: 0.24em;
   text-transform: uppercase;
@@ -1470,15 +1470,15 @@ th.num {
 .voucher-info-list dd {
   margin: 0;
   color: #111827;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 900;
-  line-height: 1.25;
+  line-height: 1.2;
 }
 
 .voucher-confirm-card {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 12px;
+  right: 12px;
   min-width: 132px;
   border-radius: 999px;
   padding: 8px 12px;
@@ -1605,7 +1605,19 @@ th.num {
   gap: 8px;
 }
 
-.voucher-notice-section p:not(.voucher-section-kicker) {
+.voucher-notice-item {
+  display: grid;
+  gap: 4px;
+}
+
+.voucher-notice-item strong {
+  color: #111827;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.voucher-notice-section p:not(.voucher-section-kicker),
+.voucher-notice-item p {
   margin: 0;
   color: #334155;
   font-size: 12px;

@@ -3268,7 +3268,10 @@ function Confirmation({ reservation }) {
           <section className="voucher-section voucher-notice-section">
             <p className="voucher-section-kicker">Remark</p>
             {confirmationNotices.map((item) => (
-              <p key={item.id}>{item.content}</p>
+              <div className="voucher-notice-item" key={item.id}>
+                {item.title && <strong>{item.title}</strong>}
+                <p>{item.content}</p>
+              </div>
             ))}
             {reservation.customerNotice && <p>{reservation.customerNotice}</p>}
           </section>
