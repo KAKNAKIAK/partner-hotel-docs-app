@@ -41,6 +41,7 @@ export const initialReservation = {
   rounding: 'round',
   bankAccount: '',
   invoiceRemark: '',
+  noticeItems: [],
   customerNotice: '',
   charges: [],
 };

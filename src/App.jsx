@@ -106,7 +106,52 @@ function formatDateTime(value) {
 }
 
 function createInitialReservation() {
-  return { ...initialReservation, issueDate: todayDate() };
+  return { ...initialReservation, issueDate: todayDate(), noticeItems: [emptyNoticeItem()] };
+}
+
+function emptyNoticeItem(content = '', options = {}) {
+  return {
+    id: makeId(),
+    title: options.title || '',
+    content,
+    invoice: options.invoice ?? true,
+    confirmation: options.confirmation ?? false,
+  };
+}
+
+function normalizeNoticeItems(items, fallbackContent = '') {
+  if (Array.isArray(items) && items.length) {
+    return items.map((item) => ({
+      id: item?.id || makeId(),
+      title: item?.title || '',
+      content: item?.content || '',
+      invoice: item?.invoice ?? true,
+      confirmation: item?.confirmation ?? false,
+    }));
+  }
+
+  if (String(fallbackContent || '').trim()) {
+    return [emptyNoticeItem(fallbackContent, { invoice: true, confirmation: false })];
+  }
+
+  return [emptyNoticeItem()];
+}
+
+function invoiceRemarkFromNoticeItems(items) {
+  return normalizeNoticeItems(items)
+    .filter((item) => item.invoice && String(item.content || '').trim())
+    .map((item) => item.content)
+    .join('\n\n');
+}
+
+function normalizeReservation(value) {
+  const base = { ...createInitialReservation(), ...value };
+  const noticeItems = normalizeNoticeItems(base.noticeItems, base.invoiceRemark);
+  return {
+    ...base,
+    noticeItems,
+    invoiceRemark: invoiceRemarkFromNoticeItems(noticeItems),
+  };
 }
 
 function emptyRoomLine(roomType = '', roomCount = 1) {
@@ -500,6 +545,7 @@ function App() {
   const [phraseSnippets, setPhraseSnippets] = useState([]);
   const [phraseQuery, setPhraseQuery] = useState('');
   const [phrasePickerOpen, setPhrasePickerOpen] = useState(false);
+  const [activeNoticeItemId, setActiveNoticeItemId] = useState('');
   const nightsInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const exchangeRateInputId = useId();
@@ -565,6 +611,10 @@ function App() {
   }, [reservation.hotelRooms, reservation.roomType]);
   const roomLines = useMemo(() => getRoomLines(reservation), [reservation.roomLines, reservation.roomType, reservation.roomCount]);
   const roomSummary = useMemo(() => summarizeRoomLines(reservation), [reservation.roomLines, reservation.roomType, reservation.roomCount]);
+  const noticeItems = useMemo(
+    () => normalizeNoticeItems(reservation.noticeItems, reservation.invoiceRemark),
+    [reservation.noticeItems, reservation.invoiceRemark]
+  );
   const selectedMealOption = reservation.mealPlanOption || inferMealPlanOption(reservation.mealPlan);
   const mealPlanDays = useMemo(
     () => normalizeMealPlanDays(reservation.mealPlanDays, reservation.statedNights || autoNights),
@@ -584,6 +634,39 @@ function App() {
     setReservation((current) => {
       return { ...current, [key]: value };
     });
+  }
+
+  function syncNoticeItems(nextItems) {
+    const normalizedItems = normalizeNoticeItems(nextItems);
+    patch({
+      noticeItems: normalizedItems,
+      invoiceRemark: invoiceRemarkFromNoticeItems(normalizedItems),
+    });
+  }
+
+  function addNoticeItem() {
+    syncNoticeItems([...noticeItems, emptyNoticeItem()]);
+  }
+
+  function removeNoticeItem(id) {
+    if (noticeItems.length <= 1) {
+      syncNoticeItems([emptyNoticeItem()]);
+      return;
+    }
+    syncNoticeItems(noticeItems.filter((item) => item.id !== id));
+  }
+
+  function updateNoticeItem(id, changes) {
+    syncNoticeItems(noticeItems.map((item) => (
+      item.id === id ? { ...item, ...changes } : item
+    )));
+  }
+
+  function openPhrasePicker(id) {
+    const item = noticeItems.find((notice) => notice.id === id);
+    setActiveNoticeItemId(id);
+    setPhraseQuery(item?.title || '');
+    setPhrasePickerOpen(true);
   }
 
   function handleIssueDateChange(value) {
@@ -748,16 +831,24 @@ function App() {
     const phrase = phraseSnippets.find((item) => item.id === id);
     if (!phrase) return;
     setPhraseQuery(phrase.title || '자주쓰는 문구');
-    patchField('invoiceRemark', phrase.content || '');
+    const targetId = activeNoticeItemId || noticeItems[0]?.id;
+    if (targetId) {
+      updateNoticeItem(targetId, {
+        title: phrase.title || '자주쓰는 문구',
+        content: phrase.content || '',
+      });
+    }
     setPhrasePickerOpen(false);
   }
 
   function selectPartner(partner) {
+    const partnerNotice = normalizeNoticeItems([], partner.invoiceRemark);
     patch({
       partnerId: partner.id,
       partnerName: partner.recipientName || partner.name,
       paymentTerms: partner.paymentTerms,
       invoiceRemark: partner.invoiceRemark,
+      noticeItems: partnerNotice,
     });
   }
 
@@ -1007,7 +1098,7 @@ function App() {
 
   async function loadLocalReservationFromText(text, fileName, handle = null, id = '') {
     const loaded = parseLocalHtml(text);
-    const nextReservation = await applyLatestDbExchangeRate({ ...createInitialReservation(), ...loaded });
+    const nextReservation = await applyLatestDbExchangeRate(normalizeReservation(loaded));
     setReservation(nextReservation);
     setCurrentFileHandle(handle);
     setCurrentFileId(id);
@@ -1084,7 +1175,7 @@ function App() {
           alert('Supabase에 저장된 예약이 없습니다.');
           return;
         }
-        setReservation({ ...createInitialReservation(), ...saved });
+        setReservation(normalizeReservation(saved));
       })
       .catch((error) => {
         console.error(error);
@@ -1475,18 +1566,46 @@ function App() {
             {activeStep === 'settlement' && (
             <Step number="4" title="정산·안내">
               <div className="settlement-note">
-                <Field label="자주쓰는 문구">
-                  <button className="phrase-load-button" type="button" onClick={() => setPhrasePickerOpen(true)}>
-                    {phraseQuery || 'DB 문구 검색/불러오기'}
+                <div className="settlement-note-head">
+                  <strong>문서 안내 항목</strong>
+                  <button className="icon-btn add-btn" type="button" aria-label="안내 항목 추가" onClick={addNoticeItem}>
+                    +
                   </button>
-                </Field>
-                <Field label="인보이스 안내 문구">
-                  <textarea
-                    value={reservation.invoiceRemark}
-                    onChange={(event) => patchField('invoiceRemark', event.target.value)}
-                    placeholder="총 입금액과 입금 계좌 사이에 표시할 내용을 입력하세요."
-                  />
-                </Field>
+                </div>
+                {noticeItems.map((item, index) => (
+                  <div className="notice-item-editor" key={item.id}>
+                    <div className="notice-item-toolbar">
+                      <span>안내 항목 {index + 1}</span>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={item.invoice}
+                          onChange={(event) => updateNoticeItem(item.id, { invoice: event.target.checked })}
+                        />
+                        인보이스
+                      </label>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={item.confirmation}
+                          onChange={(event) => updateNoticeItem(item.id, { confirmation: event.target.checked })}
+                        />
+                        바우처
+                      </label>
+                      <button className="icon-btn" type="button" aria-label="안내 항목 삭제" onClick={() => removeNoticeItem(item.id)}>
+                        x
+                      </button>
+                    </div>
+                    <button className="phrase-load-button" type="button" onClick={() => openPhrasePicker(item.id)}>
+                      {item.title || 'DB 문구 검색/불러오기'}
+                    </button>
+                    <textarea
+                      value={item.content}
+                      onChange={(event) => updateNoticeItem(item.id, { content: event.target.value })}
+                      placeholder="선택한 문서에 표시할 안내 내용을 입력하세요."
+                    />
+                  </div>
+                ))}
               </div>
             </Step>
             )}
@@ -2794,6 +2913,8 @@ function DocumentPreview({ tab, reservation, foreignTotal, krwTotal }) {
 
 function Invoice({ reservation, foreignTotal, krwTotal }) {
   const roomSummary = summarizeRoomLines(reservation);
+  const invoiceNotices = normalizeNoticeItems(reservation.noticeItems, reservation.invoiceRemark)
+    .filter((item) => item.invoice && String(item.content || '').trim());
   return (
     <article className="document">
       <div className="invoice-head">
@@ -2847,9 +2968,9 @@ function Invoice({ reservation, foreignTotal, krwTotal }) {
         <div><strong>적용환율</strong><span>{Number(reservation.exchangeRate || 0).toLocaleString('ko-KR')} / {reservation.exchangeRateDate}</span></div>
         <div className="doc-total"><strong>총입금액(원화)</strong><span>{krw(krwTotal)}</span></div>
       </div>
-      {reservation.invoiceRemark && (
-        <div className="notice-box invoice-remark-box">{reservation.invoiceRemark}</div>
-      )}
+      {invoiceNotices.map((item) => (
+        <div className="notice-box invoice-remark-box" key={item.id}>{item.content}</div>
+      ))}
       <div className="notice-box invoice-payment-box">
         <div>
           <strong>입금 계좌</strong><br />{reservation.bankAccount}
@@ -2864,6 +2985,8 @@ function Invoice({ reservation, foreignTotal, krwTotal }) {
 
 function Confirmation({ reservation }) {
   const roomSummary = summarizeRoomLines(reservation);
+  const confirmationNotices = normalizeNoticeItems(reservation.noticeItems, reservation.invoiceRemark)
+    .filter((item) => item.confirmation && String(item.content || '').trim());
   const pax = [
     reservation.adultCount ? `ADT ${reservation.adultCount}` : '',
     reservation.childCount ? `CHD ${reservation.childCount}` : '',
@@ -2891,7 +3014,12 @@ function Confirmation({ reservation }) {
         <DocBox label="식사 조건" value={reservation.mealPlan} />
         <DocBox label="결제 조건" value={reservation.paymentTerms} />
       </div>
-      <div className="notice-box"><strong>안내사항</strong><br />{reservation.customerNotice}</div>
+      {confirmationNotices.map((item) => (
+        <div className="notice-box" key={item.id}><strong>안내사항</strong><br />{item.content}</div>
+      ))}
+      {reservation.customerNotice && (
+        <div className="notice-box"><strong>안내사항</strong><br />{reservation.customerNotice}</div>
+      )}
     </article>
   );
 }
