@@ -280,10 +280,11 @@ function sanitizeFileName(value) {
 }
 
 function defaultLocalFileName(reservation) {
-  const guest = sanitizeFileName(reservation.leadGuest) || '예약문서';
+  const partner = sanitizeFileName(reservation.partnerName) || '거래처';
+  const checkIn = sanitizeFileName(reservation.checkIn) || todayDate();
   const hotel = sanitizeFileName(reservation.hotelName);
-  const date = sanitizeFileName(reservation.issueDate) || todayDate();
-  return [date, guest, hotel].filter(Boolean).join('_') + '.html';
+  const guest = sanitizeFileName(reservation.leadGuest) || '예약자';
+  return [partner, checkIn, hotel, guest].filter(Boolean).join('_') + '.html';
 }
 
 function escapeScriptJson(value) {
@@ -321,7 +322,7 @@ function buildLocalHtml(reservation) {
     <h1>거래처 인보이스·호텔 확정서 저장 파일</h1>
     <p>이 HTML 파일은 Partner Hotel Docs 앱에서 다시 불러올 수 있는 로컬 저장 파일입니다.</p>
     <dl>
-      <dt>예약명</dt><dd>${reservation.leadGuest || '-'}</dd>
+      <dt>예약자명</dt><dd>${reservation.leadGuest || '-'}</dd>
       <dt>호텔</dt><dd>${reservation.hotelName || '-'}</dd>
       <dt>체크인</dt><dd>${reservation.checkIn || '-'}</dd>
       <dt>저장일시</dt><dd>${payload.savedAt}</dd>
@@ -495,7 +496,15 @@ function SearchSelect({ label, value, loadOptions, getLabel, getMeta, onSelect, 
           setQuery(event.target.value);
           setOpen(true);
         }}
-        onFocus={() => setOpen(true)}
+        onFocus={(event) => {
+          if (value) setQuery('');
+          setOpen(true);
+          event.target.select();
+        }}
+        onClick={() => {
+          if (!open && value) setQuery('');
+          setOpen(true);
+        }}
       />
       {open && (results.length > 0 || loading) && (
         <div className="search-menu">
@@ -1568,7 +1577,7 @@ function App() {
             <Step number="1" title="기본정보 입력">
               <div className="grid grid-2">
                 <SearchSelect
-                  label="거래처 검색"
+                  label="거래처"
                   value={reservation.partnerName}
                   loadOptions={searchPartners}
                   getLabel={(item) => item.name}
@@ -1577,7 +1586,7 @@ function App() {
                   placeholder="거래처명을 입력하세요"
                 />
                 <SearchSelect
-                  label="업체 검색"
+                  label="업체"
                   value={reservation.companyName}
                   loadOptions={searchCompanyInfos}
                   getLabel={(item) => item.name}
@@ -1596,7 +1605,7 @@ function App() {
                   onChange={(value) => patchField('bankAccount', value)}
                 />
                 <div className="source-stay-group span-2">
-                  <TextInput label="예약명" value={reservation.leadGuest} onChange={(value) => patchField('leadGuest', value)} />
+                  <TextInput label="예약자명" value={reservation.leadGuest} onChange={(value) => patchField('leadGuest', value)} />
                   <div className="passenger-row">
                     <NumberInput label="성인" value={reservation.adultCount} onChange={(value) => patchField('adultCount', value)} />
                     <NumberInput label="아동" value={reservation.childCount} onChange={(value) => patchField('childCount', value)} />
@@ -1611,7 +1620,7 @@ function App() {
             <Step number="2" title="호텔·예약 기본">
               <div className="grid grid-2">
                 <SearchSelect
-                  label="호텔 검색"
+                  label="호텔"
                   value={reservation.hotelName}
                   loadOptions={searchHotels}
                   getLabel={(item) => item.name}
@@ -1675,20 +1684,20 @@ function App() {
                 </div>
                 <div className="room-lines span-2">
                   <div className="room-lines-header">
-                    <span>객실 구성</span>
-                    <button className="master-add room-line-add" type="button" onClick={addRoomLine} aria-label="객실 구성 추가">
+                    <span>객실</span>
+                    <button className="master-add room-line-add" type="button" onClick={addRoomLine} aria-label="객실 추가">
                       +
                     </button>
                   </div>
                   {roomLines.map((line) => (
                     <div className="room-line" key={line.id}>
-                      <Field label="객실 타입">
+                      <Field label="카테고리">
                         <select
                           value={line.roomType || ''}
                           onChange={(event) => updateRoomLine(line.id, { roomType: event.target.value })}
                           disabled={!roomOptions.length}
                         >
-                          <option value="">{roomOptions.length ? '객실 타입 선택' : '호텔 마스터 객실 없음'}</option>
+                          <option value="">{roomOptions.length ? '카테고리 선택' : '호텔 마스터 객실 없음'}</option>
                           {roomOptions.map((room) => (
                             <option value={room} key={room}>{room}</option>
                           ))}
@@ -1732,7 +1741,7 @@ function App() {
                       <button
                         className="icon-btn"
                         type="button"
-                        aria-label="객실 구성 삭제"
+                        aria-label="객실 삭제"
                         disabled={roomLines.length <= 1}
                         onClick={() => removeRoomLine(line.id)}
                       >
@@ -1842,7 +1851,7 @@ function App() {
                       </button>
                     </div>
                     <button className="phrase-load-button" type="button" onClick={() => openPhrasePicker(item.id)}>
-                      {item.title || 'DB 문구 검색/불러오기'}
+                      {item.title || '자주쓰는 문구'}
                     </button>
                     <textarea
                       value={item.content}
@@ -3192,7 +3201,7 @@ function Invoice({ reservation, foreignTotal, krwTotal }) {
       <div className="doc-grid">
         <DocBox label="수신" value={reservation.partnerName} />
         <DocBox label="발신 / 작성일" value={`${reservation.senderName}\n${reservation.issueDate}`} />
-        <DocBox label="예약명" value={reservation.leadGuest} />
+        <DocBox label="예약자명" value={reservation.leadGuest} />
         <DocBox label="호텔" value={reservation.hotelName} />
         <DocBox label="투숙일" value={`${stayDateTime(reservation.checkIn, reservation.checkInTime)} - ${stayDateTime(reservation.checkOut, reservation.checkOutTime)} / ${reservation.statedNights}박`} />
         <DocBox label="객실" value={roomSummary} />
