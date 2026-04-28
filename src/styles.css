@@ -1271,6 +1271,17 @@ th.num {
   white-space: pre-wrap;
 }
 
+.notice-title {
+  display: block;
+  margin: 0 0 6px;
+  color: #111827;
+  font-weight: 900;
+}
+
+.notice-box p {
+  margin: 0;
+}
+
 .invoice-payment-box {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

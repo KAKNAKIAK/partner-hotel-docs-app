@@ -3154,7 +3154,10 @@ function Invoice({ reservation, foreignTotal, krwTotal }) {
         <div className="doc-total"><strong>총입금액(원화)</strong><span>{krw(krwTotal)}</span></div>
       </div>
       {invoiceNotices.map((item) => (
-        <div className="notice-box invoice-remark-box" key={item.id}>{item.content}</div>
+        <div className="notice-box invoice-remark-box" key={item.id}>
+          {item.title && <strong className="notice-title">{item.title}</strong>}
+          <p>{item.content}</p>
+        </div>
       ))}
       <div className="notice-box invoice-payment-box">
         <div>
@@ -3268,7 +3271,7 @@ function Confirmation({ reservation }) {
             <p className="voucher-section-kicker">Remark</p>
             {confirmationNotices.map((item) => (
               <div className="voucher-notice-item" key={item.id}>
-                {item.title && <strong>{item.title}</strong>}
+                {item.title && <strong className="notice-title">{item.title}</strong>}
                 <p>{item.content}</p>
               </div>
             ))}
