@@ -130,14 +130,20 @@ button { cursor: pointer; }
 
 .header-date-field {
   display: grid;
-  gap: 4px;
-  min-width: 132px;
+  gap: 3px;
+  width: 172px;
+  min-height: 62px;
+  border: 1px solid #dbe4f0;
+  border-radius: 10px;
+  padding: 6px;
+  background: #f8fafc;
 }
 
 .header-exchange {
   display: flex;
-  align-items: center;
+  align-items: end;
   gap: 7px;
+  min-height: 62px;
   border: 1px solid #dbe4f0;
   border-radius: 10px;
   padding: 6px;
@@ -167,6 +173,7 @@ button { cursor: pointer; }
 
 .header-date-field input,
 .header-exchange input {
+  width: 100%;
   min-height: 36px;
   border: 1px solid var(--line);
   border-radius: 7px;
@@ -179,6 +186,7 @@ button { cursor: pointer; }
 
 .header-exchange .btn {
   min-height: 36px;
+  padding-inline: 12px;
   white-space: nowrap;
 }
 
