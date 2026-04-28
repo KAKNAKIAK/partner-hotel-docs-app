@@ -1008,7 +1008,6 @@ function App() {
             마스터 관리
           </button>
           <div className="brand">
-            <span className="brand-eyebrow">DOCUMENT</span>
             <h1 className="brand-title">인보이스& 바우처</h1>
           </div>
         </div>
@@ -1027,7 +1026,7 @@ function App() {
             />
           </label>
           <button className="btn btn-primary" type="button" onClick={saveExchangeRate}>
-            환율 저장
+            저장
           </button>
         </div>
         <label className={`header-date-field ${issueDateError ? 'has-error' : ''}`} htmlFor={issueDateInputId}>
