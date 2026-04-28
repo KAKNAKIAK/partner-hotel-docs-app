@@ -256,6 +256,17 @@ function stayDateTime(dateValue, timeValue) {
   return [dateValue, timeValue].filter(Boolean).join(' ');
 }
 
+function formatVoucherDate(dateValue) {
+  const normalized = normalizeDateInput(dateValue);
+  if (!normalized) return dateValue || '-';
+  const date = new Date(`${normalized}T00:00:00Z`);
+  const year = date.getUTCFullYear();
+  const month = date.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
+  const day = date.getUTCDate();
+  const weekday = date.toLocaleString('en-US', { weekday: 'short', timeZone: 'UTC' });
+  return `${year} ${month} ${day} (${weekday})`;
+}
+
 const LOCAL_DOC_VERSION = 1;
 const RECENT_FILES_KEY = 'partner-hotel-docs-recent-files';
 const HANDLE_DB_NAME = 'partner-hotel-docs-files';
@@ -936,6 +947,7 @@ function App() {
       hotelName: hotel.name,
       hotelAddress: hotel.address,
       hotelPhone: hotel.phone,
+      hotelLogoUrl: hotel.logoUrl,
       hotelRooms: hotel.rooms || [],
       roomType: hotel.rooms?.[0] || '',
       roomLines: [emptyRoomLine(hotel.rooms?.[0] || '', 1)],
@@ -3067,43 +3079,109 @@ function Invoice({ reservation, foreignTotal, krwTotal }) {
 }
 
 function Confirmation({ reservation }) {
-  const roomSummary = summarizeRoomLines(reservation);
   const confirmationNotices = normalizeNoticeItems(reservation.noticeItems, reservation.invoiceRemark)
     .filter((item) => item.confirmation && String(item.content || '').trim());
+  const roomLines = getRoomLines(reservation).filter((line) => line.roomType || roomLineBedText(line));
   const pax = [
     reservation.adultCount ? `ADT ${reservation.adultCount}` : '',
     reservation.childCount ? `CHD ${reservation.childCount}` : '',
     reservation.infantCount ? `INF ${reservation.infantCount}` : '',
   ].filter(Boolean).join(' / ');
+  const totalGuests = Number(reservation.adultCount || 0) + Number(reservation.childCount || 0) + Number(reservation.infantCount || 0);
+  const hotelInitial = String(reservation.hotelName || 'H').trim().slice(0, 1).toUpperCase();
 
   return (
-    <article className="document">
-      <div className="document-content">
-      <div className="doc-kicker">Reservation Document</div>
-      <h2 className="doc-title">HOTEL CONFIRMATION</h2>
-      <div className="confirm-hero">
-        <p className="doc-label">Confirmation No.</p>
-        <p className="confirm-no">{reservation.confirmNo || '-'}</p>
-      </div>
-      <div className="doc-rule" />
-      <h3 className="doc-hotel-name">{reservation.hotelName}</h3>
-      <p className="doc-meta">{reservation.hotelAddress}<br />{reservation.hotelPhone}</p>
-      <div className="doc-grid">
-        <DocBox label="예약자" value={reservation.leadGuest} />
-        <DocBox label="투숙 인원" value={pax || '-'} />
-        <DocBox label="체크인" value={stayDateTime(reservation.checkIn, reservation.checkInTime)} />
-        <DocBox label="체크아웃" value={stayDateTime(reservation.checkOut, reservation.checkOutTime)} />
-        <DocBox label="숙박" value={`${reservation.statedNights}박`} />
-        <DocBox label="객실" value={roomSummary} />
-        <DocBox label="식사 조건" value={reservation.mealPlan} />
-        <DocBox label="결제 조건" value={reservation.paymentTerms} />
-      </div>
-      {confirmationNotices.map((item) => (
-        <div className="notice-box" key={item.id}><strong>안내사항</strong><br />{item.content}</div>
-      ))}
-      {reservation.customerNotice && (
-        <div className="notice-box"><strong>안내사항</strong><br />{reservation.customerNotice}</div>
-      )}
+    <article className="document voucher-document">
+      <div className="document-content voucher-content">
+        <header className="voucher-top">
+          <div className="voucher-hotel-mark">
+            {reservation.hotelLogoUrl ? (
+              <img src={reservation.hotelLogoUrl} alt="" />
+            ) : (
+              <span>{hotelInitial}</span>
+            )}
+          </div>
+          <div className="voucher-title-block">
+            <p>Reservation Document</p>
+            <h2>Hotel Voucher</h2>
+            <span>{reservation.issueDate || todayDate()} · {reservation.senderName || reservation.companyName || 'NAEILTOUR'}</span>
+          </div>
+          <div className="voucher-company-mark">
+            {reservation.companyCiUrl ? <img src={reservation.companyCiUrl} alt="" /> : <strong>{reservation.companyName || '내일투어'}</strong>}
+          </div>
+        </header>
+
+        <section className="voucher-section voucher-hotel-section">
+          <div>
+            <p className="voucher-section-kicker">Hotel Information</p>
+            <h3>{reservation.hotelName || '-'}</h3>
+            <dl className="voucher-info-list">
+              <div>
+                <dt>Address</dt>
+                <dd>{reservation.hotelAddress || '-'}</dd>
+              </div>
+              <div>
+                <dt>Telephone</dt>
+                <dd>{reservation.hotelPhone || '-'}</dd>
+              </div>
+            </dl>
+          </div>
+          <aside className="voucher-confirm-card">
+            <span>Confirmation No.</span>
+            <strong>{reservation.confirmNo || '-'}</strong>
+            <p>Present this confirmation at check-in.</p>
+          </aside>
+        </section>
+
+        <section className="voucher-section">
+          <p className="voucher-section-kicker">Booking Details</p>
+          <div className="voucher-detail-grid">
+            <DocBox label="Check-in" value={formatVoucherDate(reservation.checkIn)} />
+            <DocBox label="Check-out" value={formatVoucherDate(reservation.checkOut)} />
+            <DocBox label="Duration" value={`${reservation.statedNights || 0} Night${Number(reservation.statedNights || 0) === 1 ? '' : 's'}`} />
+          </div>
+          <div className="voucher-room-list">
+            {(roomLines.length ? roomLines : [emptyRoomLine('', 1)]).map((line, index) => {
+              const bedText = roomLineBedText(line);
+              return (
+                <div className="voucher-room-card" key={line.id || `room-${index}`}>
+                  <p>Room {index + 1}</p>
+                  <div>
+                    <span>Room Type</span>
+                    <strong>{line.roomType || '-'}</strong>
+                  </div>
+                  <div>
+                    <span>Configuration</span>
+                    <strong>{bedText || '-'} <small>({line.roomCount || 0} Room)</small></strong>
+                  </div>
+                  <div>
+                    <span>Meal Plan</span>
+                    <strong className="meal">{reservation.mealPlan || '-'}</strong>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="voucher-section">
+          <p className="voucher-section-kicker">Guest Information</p>
+          <div className="voucher-guest-row">
+            <span>1</span>
+            <strong>{reservation.leadGuest || '-'}</strong>
+          </div>
+          <div className="voucher-pax-pill">Total: {pax || `${totalGuests || 0} Guest`}</div>
+        </section>
+
+        {(confirmationNotices.length > 0 || reservation.customerNotice) && (
+          <section className="voucher-section voucher-notice-section">
+            <p className="voucher-section-kicker">Remark</p>
+            {confirmationNotices.map((item) => (
+              <p key={item.id}>{item.content}</p>
+            ))}
+            {reservation.customerNotice && <p>{reservation.customerNotice}</p>}
+          </section>
+        )}
       </div>
     </article>
   );

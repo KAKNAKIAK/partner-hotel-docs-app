@@ -1322,6 +1322,293 @@ th.num {
   letter-spacing: 0.08em;
 }
 
+.voucher-document {
+  border-top: 3px solid #1f3a5f;
+  background: #fffdfa;
+}
+
+.voucher-content {
+  display: grid;
+  gap: 18px;
+}
+
+.voucher-top {
+  display: grid;
+  grid-template-columns: 120px 1fr 160px;
+  align-items: center;
+  gap: 18px;
+  min-height: 86px;
+}
+
+.voucher-hotel-mark,
+.voucher-company-mark {
+  display: flex;
+  align-items: center;
+}
+
+.voucher-hotel-mark img,
+.voucher-company-mark img {
+  display: block;
+  max-width: 116px;
+  max-height: 62px;
+  object-fit: contain;
+}
+
+.voucher-hotel-mark span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.voucher-title-block {
+  text-align: center;
+}
+
+.voucher-title-block p {
+  margin: 0 0 4px;
+  color: #9a6a2f;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.48em;
+  text-transform: uppercase;
+}
+
+.voucher-title-block h2 {
+  margin: 0;
+  color: #142a4c;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 32px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.voucher-title-block span {
+  display: block;
+  margin-top: 10px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.voucher-company-mark {
+  justify-content: flex-end;
+}
+
+.voucher-company-mark strong {
+  color: #047857;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.voucher-section {
+  border: 1px solid #dbe3ee;
+  border-radius: 16px;
+  padding: 20px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+}
+
+.voucher-section-kicker {
+  margin: 0 0 13px;
+  color: #173b67;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+}
+
+.voucher-hotel-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 304px;
+  align-items: center;
+  gap: 22px;
+}
+
+.voucher-hotel-section h3 {
+  margin: 0 0 14px;
+  color: #152b4d;
+  font-size: 27px;
+  line-height: 1.15;
+}
+
+.voucher-info-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.voucher-info-list div {
+  display: grid;
+  gap: 4px;
+}
+
+.voucher-info-list dt,
+.voucher-room-card span {
+  color: #718096;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.voucher-info-list dd {
+  margin: 0;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.voucher-confirm-card {
+  border-radius: 14px;
+  padding: 20px 18px;
+  background: linear-gradient(135deg, #1c3158, #1d4f81);
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(20, 42, 76, 0.18);
+}
+
+.voucher-confirm-card span {
+  display: block;
+  margin-bottom: 8px;
+  color: #cbd5e1;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.36em;
+  text-transform: uppercase;
+}
+
+.voucher-confirm-card strong {
+  display: block;
+  font-family: Consolas, monospace;
+  font-size: 28px;
+  letter-spacing: 0.09em;
+}
+
+.voucher-confirm-card p {
+  margin: 12px 0 0;
+  color: #dbeafe;
+  font-size: 11px;
+}
+
+.voucher-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.voucher-detail-grid .doc-box {
+  background: #f8fafc;
+}
+
+.voucher-room-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.voucher-room-card {
+  display: grid;
+  grid-template-columns: 1.1fr 1.3fr 1.2fr;
+  gap: 14px;
+  position: relative;
+  border: 1px solid #e0e7f1;
+  border-radius: 12px;
+  padding: 36px 14px 14px;
+  background: #fff;
+}
+
+.voucher-room-card > p {
+  position: absolute;
+  top: 13px;
+  left: 14px;
+  margin: 0;
+  color: #9a6a2f;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.voucher-room-card div {
+  display: grid;
+  gap: 6px;
+}
+
+.voucher-room-card strong {
+  color: #111827;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.voucher-room-card small {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.voucher-room-card .meal {
+  color: #047857;
+}
+
+.voucher-guest-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #e0e7f1;
+  border-radius: 12px;
+  padding: 11px 13px;
+  background: #fff;
+}
+
+.voucher-guest-row span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: #16345d;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.voucher-guest-row strong {
+  color: #111827;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+
+.voucher-pax-pill {
+  display: inline-flex;
+  width: max-content;
+  margin-top: 12px;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: #eef2f7;
+  color: #173b67;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.voucher-notice-section {
+  display: grid;
+  gap: 8px;
+}
+
+.voucher-notice-section p:not(.voucher-section-kicker) {
+  margin: 0;
+  color: #334155;
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
 .side-panel {
   position: sticky;
   top: 84px;
