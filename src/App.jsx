@@ -35,7 +35,6 @@ import {
   updatePhraseSnippet,
   updateRegion,
 } from './api.js';
-import { hasSupabaseConfig } from './supabaseClient.js';
 
 function makeId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -561,31 +560,6 @@ function App() {
   );
   const krwTotal = applyRounding(foreignTotal * Number(reservation.exchangeRate || 0), reservation.rounding);
 
-  const warnings = useMemo(() => {
-    const items = [];
-    if (autoNights !== Number(reservation.statedNights || 0)) {
-      items.push(`체크인/체크아웃 기준 ${autoNights}박인데 입력 박수는 ${reservation.statedNights}박입니다.`);
-    }
-    if (!reservation.partnerId) items.push('거래처 마스터가 선택되지 않았습니다.');
-    if (!reservation.companyId) items.push('업체 정보가 선택되지 않았습니다.');
-    if (!reservation.hotelId) items.push('호텔 마스터가 선택되지 않았습니다.');
-    if (!String(reservation.confirmNo || '').trim()) items.push('호텔 확정번호가 비어 있습니다.');
-    if (!String(reservation.exchangeRateDate || '').trim()) items.push('환율 기준일이 비어 있습니다.');
-    if (
-      String(reservation.mealPlan || '').toLowerCase().includes('breakfast included') &&
-      reservation.charges.some((line) => String(line.label).includes('조식'))
-    ) {
-      items.push('조식 포함 조건인데 조식 추가 비용 라인이 있습니다.');
-    }
-    if (
-      String(reservation.checkOutTime || '').trim() === '18시' &&
-      !reservation.charges.some((line) => String(line.label).includes('레이트'))
-    ) {
-      items.push('체크아웃 18시 선택 상태인데 레이트 체크아웃 요금 라인이 없습니다.');
-    }
-    return items;
-  }, [autoNights, reservation]);
-
   function patch(changes) {
     setReservation((current) => ({ ...current, ...changes }));
   }
@@ -1097,7 +1071,6 @@ function App() {
   const tabs = [
     ['invoice', '거래처 인보이스'],
     ['confirmation', '호텔 확정서'],
-    ['audit', '검수표'],
   ];
   const workflowSteps = [
     ['source', '1', '기본정보'],
@@ -1540,7 +1513,6 @@ function App() {
                 </button>
               ))}
             </div>
-            <div className="preview-hint">백엔드 연동 준비형 입력 플로우</div>
           </div>
           <div className="preview-canvas">
             <DocumentPreview
@@ -1548,56 +1520,9 @@ function App() {
               reservation={reservation}
               foreignTotal={foreignTotal}
               krwTotal={krwTotal}
-              warnings={warnings}
             />
           </div>
         </section>
-
-        <aside className="side-panel">
-          <section className="panel audit-panel">
-            <div className="panel-header">
-              <h2>실시간 검수</h2>
-              <span className="status-chip">{warnings.length}건</span>
-            </div>
-            <div className="side-body">
-              <div className="audit-summary">
-                <div className="audit-meta-row">
-                  <Metric label="예약자명" value={reservation.leadGuest || '-'} compact />
-                  <Metric label="체크인날짜" value={reservation.checkIn || '-'} compact />
-                  <Metric label="박수" value={`${autoNights}박`} compact />
-                </div>
-                <Metric
-                  label="청구액"
-                  value={`${money(foreignTotal, reservation.currency)} / ${krw(krwTotal)}`}
-                  wide
-                />
-              </div>
-              <div className="checklist">
-                {warnings.length ? (
-                  warnings.map((warning) => <div className="warning" key={warning}>{warning}</div>)
-                ) : (
-                  <div className="ok">출력 전 필수 검수 항목이 정상입니다.</div>
-                )}
-              </div>
-              <button className="btn btn-primary audit-pdf-btn" type="button" onClick={() => window.print()}>
-                PDF 파일
-              </button>
-            </div>
-          </section>
-          <section className="panel">
-            <div className="panel-header">
-            <h2>백엔드 연결 포인트</h2>
-            </div>
-            <div className="side-body">
-              <p className="quick-note">
-                현재 데이터 소스: {hasSupabaseConfig ? 'Supabase' : 'Supabase 환경변수 미설정'}<br />
-                현재 파일: {currentFileName || '새 문서'}<br />
-                환율 상태: {exchangeSaveState || '저장 환율 대기'}<br />
-                {saveState || '검색, 저장, 마스터 관리는 Supabase DB와 직접 연결됩니다.'}
-              </p>
-            </div>
-          </section>
-        </aside>
       </main>
       {masterOpen && <MasterDataManager onClose={() => setMasterOpen(false)} />}
     </>
@@ -2752,15 +2677,6 @@ function MasterColumn({
   );
 }
 
-function Metric({ label, value, wide = false, compact = false }) {
-  return (
-    <div className={`metric ${wide ? 'metric-wide' : ''} ${compact ? 'metric-compact' : ''}`}>
-      <p className="metric-label">{label}</p>
-      <p className="metric-value">{value}</p>
-    </div>
-  );
-}
-
 function TextInput({ label, value, onChange, className = '' }) {
   return (
     <Field label={label} className={className}>
@@ -2777,9 +2693,8 @@ function NumberInput({ label, value, onChange, className = '' }) {
   );
 }
 
-function DocumentPreview({ tab, reservation, foreignTotal, krwTotal, warnings }) {
+function DocumentPreview({ tab, reservation, foreignTotal, krwTotal }) {
   if (tab === 'confirmation') return <Confirmation reservation={reservation} />;
-  if (tab === 'audit') return <Audit reservation={reservation} foreignTotal={foreignTotal} krwTotal={krwTotal} warnings={warnings} />;
   return <Invoice reservation={reservation} foreignTotal={foreignTotal} krwTotal={krwTotal} />;
 }
 
@@ -2884,26 +2799,6 @@ function Confirmation({ reservation }) {
   );
 }
 
-function Audit({ reservation, foreignTotal, krwTotal, warnings }) {
-  return (
-    <article className="document">
-      <div className="doc-kicker">Internal Review</div>
-      <h2 className="doc-title">검수표</h2>
-      <div className="doc-rule" />
-      <ul className="audit-list">
-        <li><strong>거래처 마스터</strong><span>{reservation.partnerId || '-'}</span></li>
-        <li><strong>호텔 마스터</strong><span>{reservation.hotelId || '-'}</span></li>
-        <li><strong>박수</strong><span>{reservation.statedNights}박</span></li>
-        <li><strong>투숙 인원</strong><span>성인 {reservation.adultCount} / 아동 {reservation.childCount} / 유아 {reservation.infantCount}</span></li>
-        <li><strong>외화 합계</strong><span>{money(foreignTotal, reservation.currency)}</span></li>
-        <li><strong>원화 청구액</strong><span>{krw(krwTotal)}</span></li>
-      </ul>
-      <div className="checklist">
-        {warnings.length ? warnings.map((warning) => <div className="warning" key={warning}>{warning}</div>) : <div className="ok">출력 전 필수 검수 항목이 정상입니다.</div>}
-      </div>
-    </article>
-  );
-}
 
 function DocBox({ label, value }) {
   return (
