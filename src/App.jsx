@@ -463,10 +463,15 @@ function SearchSelect({ label, value, loadOptions, getLabel, getMeta, onSelect, 
   const [open, setOpen] = useState(false);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const restoreTimerRef = useRef(null);
 
   useEffect(() => {
     setQuery(value || '');
   }, [value]);
+
+  useEffect(() => () => {
+    if (restoreTimerRef.current) window.clearTimeout(restoreTimerRef.current);
+  }, []);
 
   useEffect(() => {
     let ignore = false;
@@ -505,6 +510,12 @@ function SearchSelect({ label, value, loadOptions, getLabel, getMeta, onSelect, 
           if (!open && value) setQuery('');
           setOpen(true);
         }}
+        onBlur={() => {
+          restoreTimerRef.current = window.setTimeout(() => {
+            setOpen(false);
+            setQuery(value || '');
+          }, 120);
+        }}
       />
       {open && (results.length > 0 || loading) && (
         <div className="search-menu">
@@ -513,7 +524,9 @@ function SearchSelect({ label, value, loadOptions, getLabel, getMeta, onSelect, 
             <button
               key={item.id}
               type="button"
+              onMouseDown={(event) => event.preventDefault()}
               onClick={() => {
+                if (restoreTimerRef.current) window.clearTimeout(restoreTimerRef.current);
                 setQuery(getLabel(item));
                 setOpen(false);
                 onSelect(item);
