@@ -901,9 +901,6 @@ function App() {
         <div className="brand">
           <h1 className="brand-title">인보이스& 바우처</h1>
         </div>
-        <div className="top-summary" aria-label="예약 요약">
-          <Summary label="검수" value={warnings.length ? `확인 ${warnings.length}건` : '정상'} />
-        </div>
         <label className="header-date-field">
           <span>작성일</span>
           <input
@@ -951,9 +948,6 @@ function App() {
           </div>
           <button className="btn" type="button" onClick={() => setMasterOpen(true)}>
             마스터 관리
-          </button>
-          <button className="btn" type="button" onClick={() => window.print()}>
-            인쇄 / PDF
           </button>
           <input
             ref={fileInputRef}
@@ -1285,21 +1279,23 @@ function App() {
         </section>
 
         <aside className="side-panel">
-          <section className="panel">
+          <section className="panel audit-panel">
             <div className="panel-header">
               <h2>실시간 검수</h2>
               <span className="status-chip">{warnings.length}건</span>
             </div>
             <div className="side-body">
-              <div className="metric-grid">
-                <Metric label="예약자명" value={reservation.leadGuest || '-'} />
-                <Metric label="체크인날짜" value={reservation.checkIn || '-'} />
+              <div className="audit-summary">
+                <div className="audit-meta-row">
+                  <Metric label="예약자명" value={reservation.leadGuest || '-'} compact />
+                  <Metric label="체크인날짜" value={reservation.checkIn || '-'} compact />
+                  <Metric label="박수" value={`${autoNights}박`} compact />
+                </div>
                 <Metric
                   label="청구액"
                   value={`${money(foreignTotal, reservation.currency)} / ${krw(krwTotal)}`}
                   wide
                 />
-                <Metric label="자동 박수" value={`${autoNights}박`} />
               </div>
               <div className="checklist">
                 {warnings.length ? (
@@ -1308,6 +1304,9 @@ function App() {
                   <div className="ok">출력 전 필수 검수 항목이 정상입니다.</div>
                 )}
               </div>
+              <button className="btn btn-primary audit-pdf-btn" type="button" onClick={() => window.print()}>
+                PDF 파일
+              </button>
             </div>
           </section>
           <section className="panel">
@@ -2446,18 +2445,9 @@ function MasterColumn({
   );
 }
 
-function Summary({ label, value }) {
+function Metric({ label, value, wide = false, compact = false }) {
   return (
-    <div className="summary-pill">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
-function Metric({ label, value, wide = false }) {
-  return (
-    <div className={`metric ${wide ? 'metric-wide' : ''}`}>
+    <div className={`metric ${wide ? 'metric-wide' : ''} ${compact ? 'metric-compact' : ''}`}>
       <p className="metric-label">{label}</p>
       <p className="metric-value">{value}</p>
     </div>

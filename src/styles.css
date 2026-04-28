@@ -966,6 +966,23 @@ th {
   gap: 8px;
 }
 
+.audit-panel .side-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.audit-summary {
+  display: grid;
+  gap: 8px;
+}
+
+.audit-meta-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
 .metric {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -979,16 +996,43 @@ th {
   font-weight: 900;
 }
 
+.metric-compact {
+  min-width: 0;
+  padding: 8px 7px;
+}
+
+.metric-compact .metric-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metric-compact .metric-value {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .metric-wide {
   grid-column: span 2;
   background: var(--navy);
   color: #fff;
 }
 
+.audit-summary .metric-wide {
+  grid-column: auto;
+}
+
 .checklist {
   display: flex;
   flex-direction: column;
   gap: 7px;
+  margin-top: 12px;
+}
+
+.audit-pdf-btn {
+  width: 100%;
   margin-top: 12px;
 }
 
