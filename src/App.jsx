@@ -1003,11 +1003,14 @@ function App() {
   return (
     <>
       <header className="app-topbar">
-        <button className="btn" type="button" onClick={() => setMasterOpen(true)}>
-          마스터 관리
-        </button>
-        <div className="brand">
-          <h1 className="brand-title">인보이스& 바우처</h1>
+        <div className="header-title-cluster">
+          <button className="btn btn-master" type="button" onClick={() => setMasterOpen(true)}>
+            마스터 관리
+          </button>
+          <div className="brand">
+            <span className="brand-eyebrow">DOCUMENT</span>
+            <h1 className="brand-title">인보이스& 바우처</h1>
+          </div>
         </div>
         <div className="header-exchange">
           <label htmlFor={exchangeRateInputId}>
@@ -1042,7 +1045,7 @@ function App() {
             onBlur={(event) => handleIssueDateBlur(event.target.value)}
           />
         </label>
-        <div className="toolbar">
+        <div className="toolbar file-actions">
           <button className="btn" type="button" onClick={resetLocalDocument}>
             초기화
           </button>
