@@ -32,6 +32,8 @@ export const initialReservation = {
   childCount: 0,
   infantCount: 0,
   mealPlan: '',
+  mealPlanOption: '',
+  mealPlanDays: [],
   paymentTerms: '',
   currency: 'USD',
   exchangeRate: 0,

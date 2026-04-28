@@ -169,6 +169,35 @@ function totalRoomCount(reservation) {
   return getRoomLines(reservation).reduce((sum, line) => sum + Number(line.roomCount || 0), 0) || Number(reservation.roomCount || 1) || 1;
 }
 
+const MEAL_OPTIONS = ['Breakfast included', 'ALL AI', 'Breakfast included+AI'];
+
+function mealDayText(day) {
+  const labels = [];
+  if (day?.breakfast) labels.push('Breakfast');
+  if (day?.ai) labels.push('AI');
+  return labels.join('|') || '-';
+}
+
+function mealPlanFromDays(days) {
+  return days.map(mealDayText).join('/');
+}
+
+function normalizeMealPlanDays(days, nights) {
+  const count = Math.max(0, Number(nights || 0));
+  const source = Array.isArray(days) ? days : [];
+  return Array.from({ length: count }, (_, index) => ({
+    breakfast: source[index]?.breakfast ?? true,
+    ai: source[index]?.ai ?? true,
+  }));
+}
+
+function inferMealPlanOption(value) {
+  const mealPlan = String(value || '');
+  if (MEAL_OPTIONS.includes(mealPlan)) return mealPlan;
+  if (mealPlan.includes('|') || mealPlan.includes('/')) return 'Breakfast included+AI';
+  return mealPlan;
+}
+
 function stayDateTime(dateValue, timeValue) {
   return [dateValue, timeValue].filter(Boolean).join(' ');
 }
@@ -521,6 +550,11 @@ function App() {
   }, [reservation.hotelRooms, reservation.roomType]);
   const roomLines = useMemo(() => getRoomLines(reservation), [reservation.roomLines, reservation.roomType, reservation.roomCount]);
   const roomSummary = useMemo(() => summarizeRoomLines(reservation), [reservation.roomLines, reservation.roomType, reservation.roomCount]);
+  const selectedMealOption = reservation.mealPlanOption || inferMealPlanOption(reservation.mealPlan);
+  const mealPlanDays = useMemo(
+    () => normalizeMealPlanDays(reservation.mealPlanDays, reservation.statedNights || autoNights),
+    [reservation.mealPlanDays, reservation.statedNights, autoNights]
+  );
   const foreignTotal = useMemo(
     () => reservation.charges.reduce((sum, line) => sum + lineTotal(line), 0),
     [reservation.charges]
@@ -666,11 +700,53 @@ function App() {
 
   function handleNightsChange(value) {
     const nights = Number(value || 0);
-    setReservation((current) => ({
-      ...current,
-      statedNights: nights,
-      checkOut: normalizeDateInput(current.checkIn) && nights > 0 ? addDays(current.checkIn, nights) : current.checkOut,
-    }));
+    setReservation((current) => {
+      const next = {
+        ...current,
+        statedNights: nights,
+        checkOut: normalizeDateInput(current.checkIn) && nights > 0 ? addDays(current.checkIn, nights) : current.checkOut,
+      };
+      if (current.mealPlanOption === 'Breakfast included+AI') {
+        const mealPlanDays = normalizeMealPlanDays(current.mealPlanDays, nights);
+        return {
+          ...next,
+          mealPlanDays,
+          mealPlan: mealPlanFromDays(mealPlanDays),
+        };
+      }
+      return next;
+    });
+  }
+
+  function handleMealPlanOptionChange(value) {
+    const nights = Number(reservation.statedNights || autoNights || 0);
+    if (value === 'Breakfast included+AI') {
+      const mealPlanDays = normalizeMealPlanDays(reservation.mealPlanDays, nights);
+      patch({
+        mealPlanOption: value,
+        mealPlanDays,
+        mealPlan: mealPlanFromDays(mealPlanDays),
+      });
+      return;
+    }
+
+    patch({
+      mealPlanOption: value,
+      mealPlanDays: [],
+      mealPlan: value,
+    });
+  }
+
+  function toggleMealPlanDay(index, key, checked) {
+    const nights = Number(reservation.statedNights || autoNights || 0);
+    const mealPlanDays = normalizeMealPlanDays(reservation.mealPlanDays, nights).map((day, dayIndex) => (
+      dayIndex === index ? { ...day, [key]: checked } : day
+    ));
+    patch({
+      mealPlanOption: 'Breakfast included+AI',
+      mealPlanDays,
+      mealPlan: mealPlanFromDays(mealPlanDays),
+    });
   }
 
   function selectPartner(partner) {
@@ -697,6 +773,10 @@ function App() {
   }
 
   function selectHotel(hotel) {
+    const defaultMealOption = inferMealPlanOption(hotel.defaultMealPlan);
+    const defaultMealDays = defaultMealOption === 'Breakfast included+AI'
+      ? normalizeMealPlanDays([], Number(reservation.statedNights || autoNights || 0))
+      : [];
     patch({
       hotelId: hotel.id,
       hotelName: hotel.name,
@@ -707,7 +787,9 @@ function App() {
       roomLines: [emptyRoomLine(hotel.rooms?.[0] || '', 1)],
       checkInTime: hotel.defaultCheckInTime || '',
       checkOutTime: hotel.defaultCheckOutTime || '',
-      mealPlan: hotel.defaultMealPlan,
+      mealPlan: defaultMealOption === 'Breakfast included+AI' ? mealPlanFromDays(defaultMealDays) : hotel.defaultMealPlan,
+      mealPlanOption: defaultMealOption,
+      mealPlanDays: defaultMealDays,
       customerNotice: hotel.defaultNotice,
     });
   }
@@ -1241,6 +1323,44 @@ function App() {
                     ))}
                   </div>
                 </div>
+                <div className="meal-section span-2">
+                  <Field label="식사">
+                    <select
+                      value={selectedMealOption}
+                      onChange={(event) => handleMealPlanOptionChange(event.target.value)}
+                    >
+                      <option value="">식사 조건 선택</option>
+                      {MEAL_OPTIONS.map((option) => (
+                        <option value={option} key={option}>{option}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  {selectedMealOption === 'Breakfast included+AI' && (
+                    <div className="meal-night-grid" aria-label="박수별 식사 구성">
+                      {mealPlanDays.map((day, index) => (
+                        <div className="meal-night-row" key={`meal-${index}`}>
+                          <span>{index + 1}박</span>
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={day.breakfast}
+                              onChange={(event) => toggleMealPlanDay(index, 'breakfast', event.target.checked)}
+                            />
+                            Breakfast
+                          </label>
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={day.ai}
+                              onChange={(event) => toggleMealPlanDay(index, 'ai', event.target.checked)}
+                            />
+                            AI
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div className="room-lines span-2">
                   <div className="room-lines-header">
                     <span>객실 구성</span>
@@ -1355,7 +1475,6 @@ function App() {
                     <option value="ceil">올림</option>
                   </select>
                 </Field>
-                <TextInput label="식사 조건" className="span-3" value={reservation.mealPlan} onChange={(value) => patchField('mealPlan', value)} />
                 <TextInput
                   label="결제 조건"
                   className="span-3"
