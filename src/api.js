@@ -1,6 +1,35 @@
 import { supabaseFetch } from './supabaseClient.js';
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const hotelTimeFallbackKey = 'partner-hotel-docs-hotel-times';
+
+function readHotelTimeFallbacks() {
+  if (typeof localStorage === 'undefined') return {};
+  try {
+    return JSON.parse(localStorage.getItem(hotelTimeFallbackKey) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function writeHotelTimeFallback(hotel) {
+  if (typeof localStorage === 'undefined' || !hotel?.id) return;
+  const current = readHotelTimeFallbacks();
+  current[hotel.id] = {
+    defaultCheckInTime: hotel.defaultCheckInTime || '',
+    defaultCheckOutTime: hotel.defaultCheckOutTime || '',
+  };
+  localStorage.setItem(hotelTimeFallbackKey, JSON.stringify(current));
+}
+
+function mergeHotelTimeFallback(hotel) {
+  const fallback = readHotelTimeFallbacks()[hotel.id] || {};
+  return {
+    ...hotel,
+    defaultCheckInTime: hotel.defaultCheckInTime || fallback.defaultCheckInTime || '',
+    defaultCheckOutTime: hotel.defaultCheckOutTime || fallback.defaultCheckOutTime || '',
+  };
+}
 
 function partnerFromRow(item) {
   return {
@@ -16,7 +45,7 @@ function partnerFromRow(item) {
 }
 
 function hotelFromRow(item) {
-  return {
+  return mergeHotelTimeFallback({
     id: item.id,
     name: item.name || '',
     koreanName: item.korean_name || '',
@@ -30,7 +59,7 @@ function hotelFromRow(item) {
     defaultCheckInTime: item.default_check_in_time || '',
     defaultCheckOutTime: item.default_check_out_time || '',
     rooms: Array.isArray(item.rooms) ? item.rooms : [],
-  };
+  });
 }
 
 function isMissingHotelTimeColumn(error) {
@@ -336,7 +365,9 @@ export async function createHotel(hotel) {
       method: 'POST',
       body: JSON.stringify(hotelPayload(hotel, false)),
     });
-    return { ...hotelFromRow(data[0]), defaultCheckInTime: hotel.defaultCheckInTime || '', defaultCheckOutTime: hotel.defaultCheckOutTime || '' };
+    const saved = { ...hotelFromRow(data[0]), defaultCheckInTime: hotel.defaultCheckInTime || '', defaultCheckOutTime: hotel.defaultCheckOutTime || '', _hotelTimeStorageFallback: true };
+    writeHotelTimeFallback(saved);
+    return saved;
   }
 }
 
@@ -359,7 +390,9 @@ export async function updateHotel(hotel) {
         updated_at: new Date().toISOString(),
       }),
     });
-    return { ...hotelFromRow(data[0]), defaultCheckInTime: hotel.defaultCheckInTime || '', defaultCheckOutTime: hotel.defaultCheckOutTime || '' };
+    const saved = { ...hotelFromRow(data[0]), defaultCheckInTime: hotel.defaultCheckInTime || '', defaultCheckOutTime: hotel.defaultCheckOutTime || '', _hotelTimeStorageFallback: true };
+    writeHotelTimeFallback(saved);
+    return saved;
   }
 }
 

@@ -1928,7 +1928,7 @@ function MasterDataManager({ onClose }) {
     updateHotel(selectedHotel)
       .then((saved) => {
         setHotels((current) => current.map((hotel) => (hotel.id === saved.id ? saved : hotel)));
-        setMasterState('호텔 수정 완료');
+        setMasterState(saved._hotelTimeStorageFallback ? '호텔 수정 완료 - 체크인·체크아웃은 이 브라우저에 임시 저장됨' : '호텔 수정 완료');
       })
       .catch((error) => {
         console.error(error);
