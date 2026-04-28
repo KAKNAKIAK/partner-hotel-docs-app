@@ -571,6 +571,7 @@ function App() {
   const [currentFileName, setCurrentFileName] = useState('');
   const [recentFiles, setRecentFiles] = useState(() => readRecentFiles());
   const [recentOpen, setRecentOpen] = useState(false);
+  const [recentQuery, setRecentQuery] = useState('');
   const [issueDateEditing, setIssueDateEditing] = useState(false);
   const [issueDateError, setIssueDateError] = useState('');
   const [exchangeSaveState, setExchangeSaveState] = useState('');
@@ -585,22 +586,13 @@ function App() {
   const issueDateInputId = useId();
 
   useEffect(() => {
-    if (!masterOpen && !phrasePickerOpen) return undefined;
+    if (!masterOpen && !phrasePickerOpen && !recentOpen) return undefined;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [masterOpen, phrasePickerOpen]);
-
-  useEffect(() => {
-    function closeRecentMenu(event) {
-      if (!event.target.closest?.('.recent-menu-wrap')) setRecentOpen(false);
-    }
-
-    document.addEventListener('click', closeRecentMenu);
-    return () => document.removeEventListener('click', closeRecentMenu);
-  }, []);
+  }, [masterOpen, phrasePickerOpen, recentOpen]);
 
   useEffect(() => {
     if (!actionNotice) return undefined;
@@ -750,6 +742,11 @@ function App() {
     [reservation.charges]
   );
   const krwTotal = applyRounding(foreignTotal * Number(reservation.exchangeRate || 0), reservation.rounding);
+  const filteredRecentFiles = useMemo(() => {
+    const query = recentQuery.trim().toLowerCase();
+    if (!query) return recentFiles;
+    return recentFiles.filter((item) => item.name.toLowerCase().includes(query));
+  }, [recentFiles, recentQuery]);
 
   function patch(changes) {
     setReservation((current) => ({ ...current, ...changes }));
@@ -1199,6 +1196,13 @@ function App() {
     return fileId;
   }
 
+  function removeRecentFile(item) {
+    const nextItems = recentFiles.filter((recent) => recent.id !== item.id && recent.name !== item.name);
+    setRecentFiles(nextItems);
+    writeRecentFiles(nextItems);
+    announceAction('최근 파일 목록에서 삭제했습니다', 'info');
+  }
+
   async function writeHtmlToHandle(handle, html) {
     if (!(await verifyFilePermission(handle, 'readwrite'))) {
       throw new Error('파일 저장 권한이 허용되지 않았습니다.');
@@ -1315,6 +1319,7 @@ function App() {
     setCurrentFileName(fileName || '');
     if (fileName) rememberRecentFile(fileName, handle, id);
     setSaveState(`${fileName || 'HTML 파일'} 불러오기 완료`);
+    announceAction('파일 불러오기 완료');
   }
 
   async function loadLocalFile() {
@@ -1467,30 +1472,16 @@ function App() {
           <button className="btn" type="button" onClick={loadLocalFile}>
             불러오기
           </button>
-          <div className="recent-menu-wrap">
-            <button
-              className="btn"
-              type="button"
-              aria-expanded={recentOpen}
-              onClick={(event) => {
-                event.stopPropagation();
-                setRecentOpen((open) => !open);
-              }}
-            >
-              최근파일
-            </button>
-            {recentOpen && (
-              <div className="recent-menu">
-                {recentFiles.length === 0 && <div className="recent-empty">최근 파일이 없습니다.</div>}
-                {recentFiles.map((item) => (
-                  <button key={`${item.id}-${item.name}`} type="button" onClick={() => openRecentFile(item)}>
-                    <strong>{item.name}</strong>
-                    <span>{new Date(item.savedAt).toLocaleString('ko-KR')}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <button
+            className="btn"
+            type="button"
+            onClick={() => {
+              setRecentQuery('');
+              setRecentOpen(true);
+            }}
+          >
+            최근파일
+          </button>
           <input
             ref={fileInputRef}
             className="visually-hidden"
@@ -1504,6 +1495,51 @@ function App() {
         <div className={`action-toast ${actionNotice.type}`} role="status">
           <strong>{actionNotice.type === 'error' ? '실패' : actionNotice.type === 'info' ? '진행' : '완료'}</strong>
           <span>{actionNotice.message}</span>
+        </div>
+      )}
+
+      {recentOpen && (
+        <div className="recent-modal-overlay" role="dialog" aria-modal="true" aria-label="최근 로드 파일" onClick={() => setRecentOpen(false)}>
+          <div className="recent-modal" onClick={(event) => event.stopPropagation()}>
+            <header className="recent-modal-header">
+              <h2>최근 로드 파일</h2>
+              <button type="button" onClick={() => setRecentOpen(false)} aria-label="최근 파일 닫기">×</button>
+            </header>
+            <input
+              className="recent-search-input"
+              type="search"
+              value={recentQuery}
+              onChange={(event) => setRecentQuery(event.target.value)}
+              placeholder="파일 이름으로 검색..."
+              autoFocus
+            />
+            <div className="recent-file-list">
+              {filteredRecentFiles.length === 0 && (
+                <div className="recent-empty">
+                  {recentFiles.length === 0 ? '최근 파일이 없습니다.' : '검색 결과가 없습니다.'}
+                </div>
+              )}
+              {filteredRecentFiles.map((item) => (
+                <div className="recent-file-row" key={`${item.id}-${item.name}`}>
+                  <button type="button" onClick={() => openRecentFile(item)}>
+                    <strong>{item.name}</strong>
+                    <span>{new Date(item.savedAt).toLocaleString('ko-KR')}</span>
+                  </button>
+                  <button
+                    className="recent-delete"
+                    type="button"
+                    onClick={() => removeRecentFile(item)}
+                    aria-label={`${item.name} 최근 파일 삭제`}
+                  >
+                    삭제
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button className="btn recent-close-btn" type="button" onClick={() => setRecentOpen(false)}>
+              닫기
+            </button>
+          </div>
         </div>
       )}
 
@@ -1919,13 +1955,14 @@ function App() {
           initialTab={masterInitialTab}
           onClose={() => setMasterOpen(false)}
           onDataChange={handleMasterDataChange}
+          onAction={announceAction}
         />
       )}
     </>
   );
 }
 
-function MasterDataManager({ initialTab = 'hotels', onClose, onDataChange }) {
+function MasterDataManager({ initialTab = 'hotels', onClose, onDataChange, onAction }) {
   const ciInputId = useId();
   const hotelViInputId = useId();
   const companyCiInputId = useId();
@@ -1967,6 +2004,19 @@ function MasterDataManager({ initialTab = 'hotels', onClose, onDataChange }) {
   const selectedCompany = companyInfos.find((company) => company.id === selectedCompanyId) || companyInfos[0] || emptyCompanyInfo();
   const selectedPhrase = phraseSnippets.find((phrase) => phrase.id === selectedPhraseId) || phraseSnippets[0] || emptyPhraseSnippet();
   const rooms = selectedHotel?.rooms || [];
+  const lastMasterNoticeRef = useRef('');
+
+  function notifyMaster(message, type = 'success') {
+    onAction?.(message, type);
+  }
+
+  useEffect(() => {
+    if (!masterState || lastMasterNoticeRef.current === masterState) return;
+    if (!/(완료|실패|취소)/.test(masterState)) return;
+    if (masterState === 'Supabase 연결 완료') return;
+    lastMasterNoticeRef.current = masterState;
+    notifyMaster(masterState, masterState.includes('실패') ? 'error' : 'success');
+  }, [masterState]);
 
   useEffect(() => {
     let ignore = false;
@@ -2299,10 +2349,12 @@ function MasterDataManager({ initialTab = 'hotels', onClose, onDataChange }) {
         setSelectedPartnerId(saved.id);
         setNewPartner('');
         setMasterState('여행사 저장 완료');
+        notifyMaster('여행사 저장 완료');
       })
       .catch((error) => {
         console.error(error);
         setMasterState('여행사 저장 실패');
+        notifyMaster('여행사 저장 실패', 'error');
       });
   }
 
@@ -2321,10 +2373,12 @@ function MasterDataManager({ initialTab = 'hotels', onClose, onDataChange }) {
         setPartners((current) => current.map((partner) => (partner.id === saved.id ? saved : partner)));
         onDataChange?.('partner', saved);
         setMasterState('여행사 수정 완료');
+        notifyMaster('여행사 수정 완료');
       })
       .catch((error) => {
         console.error(error);
         setMasterState('여행사 수정 실패');
+        notifyMaster('여행사 수정 실패', 'error');
       });
   }
 
@@ -2444,10 +2498,12 @@ function MasterDataManager({ initialTab = 'hotels', onClose, onDataChange }) {
         setCompanyInfos((current) => current.map((company) => (company.id === saved.id ? saved : company)));
         onDataChange?.('company', saved);
         setMasterState('업체 정보 저장 완료');
+        notifyMaster('업체 정보 저장 완료');
       })
       .catch((error) => {
         console.error(error);
         setMasterState('업체 정보 저장 실패');
+        notifyMaster('업체 정보 저장 실패', 'error');
       });
   }
 
@@ -2520,10 +2576,12 @@ function MasterDataManager({ initialTab = 'hotels', onClose, onDataChange }) {
       .then((saved) => {
         setPhraseSnippets((current) => current.map((phrase) => (phrase.id === saved.id ? saved : phrase)));
         setMasterState('문구 수정 완료');
+        notifyMaster('문구 수정 완료');
       })
       .catch((error) => {
         console.error(error);
         setMasterState('문구 수정 실패');
+        notifyMaster('문구 수정 실패', 'error');
       });
   }
 
@@ -2552,10 +2610,12 @@ function MasterDataManager({ initialTab = 'hotels', onClose, onDataChange }) {
         setHotels((current) => current.map((hotel) => (hotel.id === saved.id ? saved : hotel)));
         onDataChange?.('hotel', saved);
         setMasterState('호텔 수정 완료');
+        notifyMaster('호텔 수정 완료');
       })
       .catch((error) => {
         console.error(error);
         setMasterState('호텔 수정 실패');
+        notifyMaster('호텔 수정 실패', 'error');
       });
   }
 

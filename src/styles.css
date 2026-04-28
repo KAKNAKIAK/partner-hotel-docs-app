@@ -261,54 +261,138 @@ button { cursor: pointer; }
   }
 }
 
-.recent-menu-wrap {
-  position: relative;
-  display: inline-flex;
-}
-
-.recent-menu {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 80;
-  width: min(340px, 88vw);
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fff;
-  box-shadow: var(--shadow);
-}
-
-.recent-menu button {
+.recent-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 115;
   display: grid;
-  width: 100%;
+  place-items: center;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.34);
+}
+
+.recent-modal {
+  display: grid;
+  gap: 16px;
+  width: min(632px, 96vw);
+  border: 1px solid #d7dee9;
+  border-radius: 7px;
+  padding: 20px;
+  background: #fff;
+  box-shadow: 0 24px 56px rgba(15, 23, 42, 0.24);
+}
+
+.recent-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.recent-modal-header h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.recent-modal-header button {
+  width: 28px;
+  height: 28px;
   border: 0;
-  border-bottom: 1px solid var(--line);
-  padding: 10px 12px;
+  background: transparent;
+  color: #98a2b3;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.recent-search-input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #d7dee9;
+  border-radius: 6px;
+  padding: 0 12px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 16px;
+  outline: none;
+}
+
+.recent-search-input:focus {
+  border-color: #8fb6ff;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.18);
+}
+
+.recent-file-list {
+  max-height: 240px;
+  overflow: auto;
+  border: 1px solid #d7dee9;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.recent-file-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 56px;
+  align-items: stretch;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.recent-file-row:last-child {
+  border-bottom: 0;
+}
+
+.recent-file-row > button:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 0;
+  padding: 13px 14px;
   background: #fff;
   color: var(--ink);
   text-align: left;
 }
 
-.recent-menu button:last-child { border-bottom: 0; }
-.recent-menu button:hover { background: var(--blue-soft); }
+.recent-file-row > button:first-child:hover {
+  background: #f8fafc;
+}
 
-.recent-menu strong {
+.recent-file-row strong {
   overflow: hidden;
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.recent-menu span,
+.recent-file-row span,
 .recent-empty {
   color: var(--muted);
   font-size: 11px;
   font-weight: 800;
 }
 
+.recent-delete {
+  border: 0;
+  border-left: 1px solid #e5e7eb;
+  background: #fff;
+  color: #98a2b3;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.recent-delete:hover {
+  background: #fff1f2;
+  color: #b42318;
+}
+
 .recent-empty {
   padding: 12px;
+}
+
+.recent-close-btn {
+  width: 100%;
+  min-height: 42px;
 }
 
 .visually-hidden {
@@ -1372,7 +1456,7 @@ th.num {
   width: 58px;
   height: 58px;
   border-radius: 18px;
-  background: #eff6ff;
+  background: transparent;
   color: #1e3a8a;
   font-size: 28px;
   font-weight: 900;
@@ -1427,7 +1511,7 @@ th.num {
   border: 1px solid #dbe3ee;
   border-radius: 16px;
   padding: 20px;
-  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  background: transparent;
 }
 
 .voucher-section-kicker {
@@ -1493,15 +1577,16 @@ th.num {
   min-width: 132px;
   border-radius: 999px;
   padding: 8px 12px;
-  background: #1c3158;
-  color: #fff;
-  box-shadow: 0 8px 18px rgba(20, 42, 76, 0.16);
+  border: 1px solid #dbe3ee;
+  background: transparent;
+  color: #173b67;
+  box-shadow: none;
 }
 
 .voucher-confirm-card span {
   display: block;
   margin-bottom: 2px;
-  color: #cbd5e1;
+  color: #718096;
   font-size: 8px;
   font-weight: 900;
   letter-spacing: 0.22em;
@@ -1526,7 +1611,7 @@ th.num {
 }
 
 .voucher-detail-grid .doc-box {
-  background: #f8fafc;
+  background: transparent;
 }
 
 .voucher-room-list {
@@ -1543,7 +1628,7 @@ th.num {
   border: 1px solid #e0e7f1;
   border-radius: 12px;
   padding: 14px;
-  background: #fff;
+  background: transparent;
 }
 
 .voucher-room-card > p {
@@ -1578,7 +1663,7 @@ th.num {
   border: 1px solid #e0e7f1;
   border-radius: 12px;
   padding: 11px 13px;
-  background: #fff;
+  background: transparent;
 }
 
 .voucher-guest-row span {
@@ -1606,7 +1691,8 @@ th.num {
   margin-left: auto;
   border-radius: 999px;
   padding: 8px 12px;
-  background: #eef2f7;
+  border: 1px solid #dbe3ee;
+  background: transparent;
   color: #173b67;
   font-size: 12px;
   font-weight: 900;
