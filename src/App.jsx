@@ -740,7 +740,12 @@ function App() {
   function toggleMealPlanDay(index, key, checked) {
     const nights = Number(reservation.statedNights || autoNights || 0);
     const mealPlanDays = normalizeMealPlanDays(reservation.mealPlanDays, nights).map((day, dayIndex) => (
-      dayIndex === index ? { ...day, [key]: checked } : day
+      dayIndex === index
+        ? {
+            breakfast: key === 'breakfast' ? checked : checked ? false : day.breakfast,
+            ai: key === 'ai' ? checked : checked ? false : day.ai,
+          }
+        : day
     ));
     patch({
       mealPlanOption: 'Breakfast included+AI',
