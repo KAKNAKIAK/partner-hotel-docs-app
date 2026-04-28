@@ -1668,6 +1668,8 @@ th.num {
   width: 100%;
   min-height: 72px;
   margin-top: 12px;
+  font-size: 26px;
+  font-weight: 900;
 }
 
 .master-overlay {

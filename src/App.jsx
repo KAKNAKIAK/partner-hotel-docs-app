@@ -1103,7 +1103,12 @@ function App() {
   }
 
   function resetLocalDocument() {
-    setReservation(createInitialReservation());
+    setReservation((current) => ({
+      ...createInitialReservation(),
+      currency: current.currency,
+      exchangeRate: current.exchangeRate,
+      exchangeRateDate: current.exchangeRateDate,
+    }));
     setActiveTab('invoice');
     setActiveStep('source');
     setCheckInError('');
