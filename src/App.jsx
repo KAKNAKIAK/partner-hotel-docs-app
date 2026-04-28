@@ -497,6 +497,7 @@ function App() {
   const [issueDateError, setIssueDateError] = useState('');
   const [exchangeSaveState, setExchangeSaveState] = useState('');
   const [phraseSnippets, setPhraseSnippets] = useState([]);
+  const [phraseQuery, setPhraseQuery] = useState('');
   const nightsInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const exchangeRateInputId = useId();
@@ -744,6 +745,7 @@ function App() {
   function applyPhraseSnippet(id) {
     const phrase = phraseSnippets.find((item) => item.id === id);
     if (!phrase) return;
+    setPhraseQuery(phrase.title || '자주쓰는 문구');
     patchField('invoiceRemark', phrase.content || '');
   }
 
@@ -1459,12 +1461,31 @@ function App() {
             <Step number="4" title="정산·안내">
               <div className="settlement-note">
                 <Field label="자주쓰는 문구">
-                  <select value="" onChange={(event) => applyPhraseSnippet(event.target.value)}>
-                    <option value="">DB 문구 불러오기</option>
-                    {phraseSnippets.map((phrase) => (
-                      <option value={phrase.id} key={phrase.id}>{phrase.title || '자주쓰는 문구'}</option>
-                    ))}
-                  </select>
+                  <div className="phrase-search-box">
+                    <input
+                      value={phraseQuery}
+                      onChange={(event) => setPhraseQuery(event.target.value)}
+                      placeholder="DB 문구 검색"
+                    />
+                    <div className="phrase-search-results">
+                      {phraseSnippets
+                        .filter((phrase) => {
+                          const keyword = phraseQuery.trim().toLowerCase();
+                          if (!keyword) return true;
+                          return `${phrase.title || ''} ${phrase.content || ''}`.toLowerCase().includes(keyword);
+                        })
+                        .slice(0, 6)
+                        .map((phrase) => (
+                          <button type="button" key={phrase.id} onClick={() => applyPhraseSnippet(phrase.id)}>
+                            <strong>{phrase.title || '자주쓰는 문구'}</strong>
+                            <span>{phrase.content || '저장된 내용 없음'}</span>
+                          </button>
+                        ))}
+                      {phraseSnippets.length === 0 && (
+                        <p>마스터 관리에서 자주쓰는 문구를 먼저 등록하세요.</p>
+                      )}
+                    </div>
+                  </div>
                 </Field>
                 <Field label="인보이스 안내 문구">
                   <textarea
