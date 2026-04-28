@@ -902,9 +902,28 @@ function App() {
     }
   }
 
-  function loadLocalReservationFromText(text, fileName, handle = null, id = '') {
+  async function applyLatestDbExchangeRate(baseReservation) {
+    try {
+      const savedRate = await loadLatestExchangeRate(baseReservation.currency || 'USD');
+      if (!savedRate) return baseReservation;
+      setExchangeSaveState(`DB 환율 불러옴: ${savedRate.exchangeDate}`);
+      return {
+        ...baseReservation,
+        currency: savedRate.currency || baseReservation.currency,
+        exchangeRate: savedRate.rate,
+        exchangeRateDate: savedRate.exchangeDate,
+      };
+    } catch (error) {
+      console.error(error);
+      setExchangeSaveState('DB 환율을 불러오지 못했습니다');
+      return baseReservation;
+    }
+  }
+
+  async function loadLocalReservationFromText(text, fileName, handle = null, id = '') {
     const loaded = parseLocalHtml(text);
-    setReservation({ ...createInitialReservation(), ...loaded });
+    const nextReservation = await applyLatestDbExchangeRate({ ...createInitialReservation(), ...loaded });
+    setReservation(nextReservation);
     setCurrentFileHandle(handle);
     setCurrentFileId(id);
     setCurrentFileName(fileName || '');
@@ -926,7 +945,7 @@ function App() {
         });
         if (!(await verifyFilePermission(handle, 'read'))) return;
         const file = await handle.getFile();
-        loadLocalReservationFromText(await file.text(), file.name, handle);
+        await loadLocalReservationFromText(await file.text(), file.name, handle);
         return;
       }
 
@@ -944,7 +963,7 @@ function App() {
     if (!file) return;
 
     try {
-      loadLocalReservationFromText(await file.text(), file.name);
+      await loadLocalReservationFromText(await file.text(), file.name);
     } catch (error) {
       console.error(error);
       alert(error.message || 'HTML 파일을 불러오지 못했습니다.');
@@ -966,7 +985,7 @@ function App() {
       }
       if (!(await verifyFilePermission(handle, 'read'))) return;
       const file = await handle.getFile();
-      loadLocalReservationFromText(await file.text(), file.name, handle, item.id);
+      await loadLocalReservationFromText(await file.text(), file.name, handle, item.id);
     } catch (error) {
       console.error(error);
       alert(error.message || '최근 파일을 열지 못했습니다.');
