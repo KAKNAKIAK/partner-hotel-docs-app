@@ -830,6 +830,15 @@ select:focus {
 
 .default-box .grid { margin-top: 10px; }
 
+.settlement-note {
+  display: grid;
+  gap: 10px;
+}
+
+.settlement-note textarea {
+  min-height: 150px;
+}
+
 .tabs {
   display: flex;
   gap: 6px;
@@ -1039,6 +1048,11 @@ th {
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
+}
+
+.invoice-remark-box {
+  min-height: 70px;
+  margin-top: 14px;
 }
 
 .invoice-payment-box > div {

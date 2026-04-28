@@ -496,6 +496,7 @@ function App() {
   const [issueDateEditing, setIssueDateEditing] = useState(false);
   const [issueDateError, setIssueDateError] = useState('');
   const [exchangeSaveState, setExchangeSaveState] = useState('');
+  const [phraseSnippets, setPhraseSnippets] = useState([]);
   const nightsInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const exchangeRateInputId = useId();
@@ -536,6 +537,18 @@ function App() {
         console.error(error);
         if (!ignore) setExchangeSaveState('저장 환율을 불러오지 못했습니다');
       });
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+    listPhraseSnippets()
+      .then((items) => {
+        if (!ignore) setPhraseSnippets(items);
+      })
+      .catch((error) => console.error(error));
     return () => {
       ignore = true;
     };
@@ -726,6 +739,12 @@ function App() {
       mealPlanDays,
       mealPlan: mealPlanFromDays(mealPlanDays),
     });
+  }
+
+  function applyPhraseSnippet(id) {
+    const phrase = phraseSnippets.find((item) => item.id === id);
+    if (!phrase) return;
+    patchField('invoiceRemark', phrase.content || '');
   }
 
   function selectPartner(partner) {
@@ -1438,36 +1457,22 @@ function App() {
 
             {activeStep === 'settlement' && (
             <Step number="4" title="정산·안내">
-              <div className="grid grid-3">
-                <TextInput label="통화" value={reservation.currency} onChange={(value) => patchField('currency', value)} />
-                <NumberInput label="환율" value={reservation.exchangeRate} onChange={(value) => patchField('exchangeRate', value)} />
-                <TextInput
-                  label="환율 기준일"
-                  value={reservation.exchangeRateDate}
-                  onChange={(value) => patchField('exchangeRateDate', value)}
-                />
-                <Field label="원화 처리" className="span-3">
-                  <select value={reservation.rounding} onChange={(event) => patchField('rounding', event.target.value)}>
-                    <option value="round">반올림</option>
-                    <option value="floor">절사</option>
-                    <option value="ceil">올림</option>
+              <div className="settlement-note">
+                <Field label="자주쓰는 문구">
+                  <select value="" onChange={(event) => applyPhraseSnippet(event.target.value)}>
+                    <option value="">DB 문구 불러오기</option>
+                    {phraseSnippets.map((phrase) => (
+                      <option value={phrase.id} key={phrase.id}>{phrase.title || '자주쓰는 문구'}</option>
+                    ))}
                   </select>
                 </Field>
-                <TextInput
-                  label="결제 조건"
-                  className="span-3"
-                  value={reservation.paymentTerms}
-                  onChange={(value) => patchField('paymentTerms', value)}
-                />
-                <Field label="고객 안내사항" className="span-3">
-                  <textarea value={reservation.customerNotice} onChange={(event) => patchField('customerNotice', event.target.value)} />
+                <Field label="인보이스 안내 문구">
+                  <textarea
+                    value={reservation.invoiceRemark}
+                    onChange={(event) => patchField('invoiceRemark', event.target.value)}
+                    placeholder="총 입금액과 입금 계좌 사이에 표시할 내용을 입력하세요."
+                  />
                 </Field>
-                <details className="default-box span-3">
-                  <summary>거래처 인보이스 문구</summary>
-                  <Field label="거래처 인보이스 문구">
-                    <textarea value={reservation.invoiceRemark} onChange={(event) => patchField('invoiceRemark', event.target.value)} />
-                  </Field>
-                </details>
               </div>
             </Step>
             )}
@@ -2784,9 +2789,12 @@ function Invoice({ reservation, foreignTotal, krwTotal }) {
         <div><strong>적용환율</strong><span>{Number(reservation.exchangeRate || 0).toLocaleString('ko-KR')} / {reservation.exchangeRateDate}</span></div>
         <div className="doc-total"><strong>총입금액(원화)</strong><span>{krw(krwTotal)}</span></div>
       </div>
+      {reservation.invoiceRemark && (
+        <div className="notice-box invoice-remark-box">{reservation.invoiceRemark}</div>
+      )}
       <div className="notice-box invoice-payment-box">
         <div>
-          <strong>입금 계좌</strong><br />{reservation.bankAccount}<br /><br />{reservation.invoiceRemark}
+          <strong>입금 계좌</strong><br />{reservation.bankAccount}
         </div>
         {reservation.companySealUrl && (
           <img className="invoice-seal" src={reservation.companySealUrl} alt="" />
