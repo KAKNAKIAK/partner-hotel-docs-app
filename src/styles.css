@@ -1171,6 +1171,10 @@ th {
   text-align: center;
 }
 
+th.num {
+  text-align: center;
+}
+
 .num {
   text-align: right;
   white-space: nowrap;
@@ -2206,11 +2210,20 @@ th {
 }
 
 @media print {
-  body { background: #fff; }
+  html,
+  body {
+    width: 210mm;
+    min-height: 297mm;
+    overflow: visible;
+    background: #fff;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
 
   .app-topbar,
   .form-panel,
-  .preview-header {
+  .preview-header,
+  .side-panel {
     display: none !important;
   }
 
@@ -2232,15 +2245,21 @@ th {
   }
 
   .document {
-    width: auto;
-    min-height: auto;
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0;
     box-shadow: none;
     page-break-after: always;
     transform: none;
   }
 
+  th,
+  th.num {
+    text-align: center !important;
+  }
+
   @page {
     size: A4;
-    margin: 12mm;
+    margin: 0;
   }
 }
