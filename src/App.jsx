@@ -186,8 +186,8 @@ function normalizeMealPlanDays(days, nights) {
   const count = Math.max(0, Number(nights || 0));
   const source = Array.isArray(days) ? days : [];
   return Array.from({ length: count }, (_, index) => ({
-    breakfast: source[index]?.breakfast ?? true,
-    ai: source[index]?.ai ?? true,
+    breakfast: source[index]?.breakfast ?? false,
+    ai: source[index]?.ai ?? false,
   }));
 }
 
@@ -1323,44 +1323,6 @@ function App() {
                     ))}
                   </div>
                 </div>
-                <div className="meal-section span-2">
-                  <Field label="식사">
-                    <select
-                      value={selectedMealOption}
-                      onChange={(event) => handleMealPlanOptionChange(event.target.value)}
-                    >
-                      <option value="">식사 조건 선택</option>
-                      {MEAL_OPTIONS.map((option) => (
-                        <option value={option} key={option}>{option}</option>
-                      ))}
-                    </select>
-                  </Field>
-                  {selectedMealOption === 'Breakfast included+AI' && (
-                    <div className="meal-night-grid" aria-label="박수별 식사 구성">
-                      {mealPlanDays.map((day, index) => (
-                        <div className="meal-night-row" key={`meal-${index}`}>
-                          <span>{index + 1}박</span>
-                          <label>
-                            <input
-                              type="checkbox"
-                              checked={day.breakfast}
-                              onChange={(event) => toggleMealPlanDay(index, 'breakfast', event.target.checked)}
-                            />
-                            Breakfast
-                          </label>
-                          <label>
-                            <input
-                              type="checkbox"
-                              checked={day.ai}
-                              onChange={(event) => toggleMealPlanDay(index, 'ai', event.target.checked)}
-                            />
-                            AI
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
                 <div className="room-lines span-2">
                   <div className="room-lines-header">
                     <span>객실 구성</span>
@@ -1428,6 +1390,44 @@ function App() {
                       </button>
                     </div>
                   ))}
+                </div>
+                <div className="meal-section span-2">
+                  <Field label="식사">
+                    <select
+                      value={selectedMealOption}
+                      onChange={(event) => handleMealPlanOptionChange(event.target.value)}
+                    >
+                      <option value="">식사 조건 선택</option>
+                      {MEAL_OPTIONS.map((option) => (
+                        <option value={option} key={option}>{option}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  {selectedMealOption === 'Breakfast included+AI' && (
+                    <div className="meal-night-grid" aria-label="박수별 식사 구성">
+                      {mealPlanDays.map((day, index) => (
+                        <div className="meal-night-row" key={`meal-${index}`}>
+                          <span>{index + 1}박</span>
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={day.breakfast}
+                              onChange={(event) => toggleMealPlanDay(index, 'breakfast', event.target.checked)}
+                            />
+                            Breakfast
+                          </label>
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={day.ai}
+                              onChange={(event) => toggleMealPlanDay(index, 'ai', event.target.checked)}
+                            />
+                            AI
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </Step>
