@@ -1431,12 +1431,13 @@ th.num {
 .voucher-hotel-section {
   position: relative;
   display: block;
-  min-height: 210px;
+  min-height: 0;
+  padding-right: 170px;
 }
 
 .voucher-hotel-section h3 {
   margin: 0 0 14px;
-  max-width: calc(100% - 150px);
+  max-width: 100%;
   color: #152b4d;
   font-size: 27px;
   line-height: 1.15;
