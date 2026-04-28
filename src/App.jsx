@@ -916,6 +916,7 @@ function App() {
     const partnerNotice = normalizeNoticeItems([], partner.invoiceRemark);
     patch({
       partnerId: partner.id,
+      partnerCiUrl: partner.ciUrl || '',
       partnerName: partner.recipientName || partner.name,
       paymentTerms: partner.paymentTerms,
       invoiceRemark: partner.invoiceRemark,
@@ -958,6 +959,60 @@ function App() {
       mealPlanDays: defaultMealDays,
       customerNotice: hotel.defaultNotice,
     });
+  }
+
+  function handleMasterDataChange(type, item) {
+    if (!item?.id) return;
+
+    if (type === 'partner') {
+      setReservation((current) => (
+        current.partnerId === item.id
+          ? {
+              ...current,
+              partnerCiUrl: item.ciUrl || '',
+              partnerName: item.recipientName || item.name || current.partnerName,
+              paymentTerms: item.paymentTerms || '',
+              invoiceRemark: item.invoiceRemark || '',
+            }
+          : current
+      ));
+      return;
+    }
+
+    if (type === 'hotel') {
+      setReservation((current) => (
+        current.hotelId === item.id
+          ? {
+              ...current,
+              hotelName: item.name || current.hotelName,
+              hotelAddress: item.address || '',
+              hotelPhone: item.phone || '',
+              hotelLogoUrl: item.logoUrl || '',
+              hotelRooms: item.rooms || current.hotelRooms,
+              customerNotice: item.defaultNotice || current.customerNotice,
+            }
+          : current
+      ));
+      return;
+    }
+
+    if (type === 'company') {
+      setReservation((current) => (
+        current.companyId === item.id
+          ? {
+              ...current,
+              companyName: item.name || current.companyName,
+              companyCiUrl: item.ciUrl || '',
+              companyAddress: item.address || '',
+              companyPhone: item.phone || '',
+              companyEmail: item.email || '',
+              companySealUrl: item.sealUrl || '',
+              senderName: item.name || current.senderName,
+              bankAccount: item.bankAccount || '',
+            }
+          : current
+      ));
+    }
   }
 
   function addCharge(type) {
@@ -1799,12 +1854,18 @@ function App() {
           </div>
         </div>
       )}
-      {masterOpen && <MasterDataManager initialTab={masterInitialTab} onClose={() => setMasterOpen(false)} />}
+      {masterOpen && (
+        <MasterDataManager
+          initialTab={masterInitialTab}
+          onClose={() => setMasterOpen(false)}
+          onDataChange={handleMasterDataChange}
+        />
+      )}
     </>
   );
 }
 
-function MasterDataManager({ initialTab = 'hotels', onClose }) {
+function MasterDataManager({ initialTab = 'hotels', onClose, onDataChange }) {
   const ciInputId = useId();
   const hotelViInputId = useId();
   const companyCiInputId = useId();
@@ -2198,6 +2259,7 @@ function MasterDataManager({ initialTab = 'hotels', onClose }) {
     updatePartner(selectedPartner)
       .then((saved) => {
         setPartners((current) => current.map((partner) => (partner.id === saved.id ? saved : partner)));
+        onDataChange?.('partner', saved);
         setMasterState('여행사 수정 완료');
       })
       .catch((error) => {
@@ -2320,6 +2382,7 @@ function MasterDataManager({ initialTab = 'hotels', onClose }) {
     updateCompanyInfo(selectedCompany)
       .then((saved) => {
         setCompanyInfos((current) => current.map((company) => (company.id === saved.id ? saved : company)));
+        onDataChange?.('company', saved);
         setMasterState('업체 정보 저장 완료');
       })
       .catch((error) => {
@@ -2427,6 +2490,7 @@ function MasterDataManager({ initialTab = 'hotels', onClose }) {
     updateHotel(selectedHotel)
       .then((saved) => {
         setHotels((current) => current.map((hotel) => (hotel.id === saved.id ? saved : hotel)));
+        onDataChange?.('hotel', saved);
         setMasterState('호텔 수정 완료');
       })
       .catch((error) => {
@@ -3067,6 +3131,7 @@ function Confirmation({ reservation }) {
   ].filter(Boolean).join(' / ');
   const totalGuests = Number(reservation.adultCount || 0) + Number(reservation.childCount || 0) + Number(reservation.infantCount || 0);
   const hotelInitial = String(reservation.hotelName || 'H').trim().slice(0, 1).toUpperCase();
+  const voucherPartnerCiUrl = reservation.partnerCiUrl || reservation.companyCiUrl;
 
   return (
     <article className="document voucher-document">
@@ -3083,10 +3148,9 @@ function Confirmation({ reservation }) {
             <p>Reservation Document</p>
             <h2>Hotel Voucher</h2>
             <em>호텔바우처</em>
-            <span>{reservation.issueDate || todayDate()} · {reservation.senderName || reservation.companyName || 'NAEILTOUR'}</span>
           </div>
           <div className="voucher-company-mark">
-            {reservation.companyCiUrl ? <img src={reservation.companyCiUrl} alt="" /> : <strong>{reservation.companyName || '내일투어'}</strong>}
+            {voucherPartnerCiUrl ? <img src={voucherPartnerCiUrl} alt="" /> : <strong>{reservation.partnerName || reservation.companyName || '내일투어'}</strong>}
           </div>
         </header>
 
