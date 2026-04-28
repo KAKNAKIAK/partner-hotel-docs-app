@@ -1449,9 +1449,6 @@ function App() {
           />
         </label>
         <div className="toolbar file-actions">
-          <button className="btn" type="button" onClick={resetLocalDocument}>
-            초기화
-          </button>
           <button className="btn btn-primary" type="button" onClick={saveLocalFile}>
             저장
           </button>
