@@ -980,12 +980,6 @@ function App() {
             {activeStep === 'source' && (
             <Step number="1" title="기본정보 입력">
               <div className="grid grid-2">
-                <TextInput label="예약명" className="span-2" value={reservation.leadGuest} onChange={(value) => patchField('leadGuest', value)} />
-                <div className="passenger-row span-2">
-                  <NumberInput label="성인" value={reservation.adultCount} onChange={(value) => patchField('adultCount', value)} />
-                  <NumberInput label="아동" value={reservation.childCount} onChange={(value) => patchField('childCount', value)} />
-                  <NumberInput label="유아" value={reservation.infantCount} onChange={(value) => patchField('infantCount', value)} />
-                </div>
                 <SearchSelect
                   label="거래처 검색"
                   value={reservation.partnerName}
@@ -1014,6 +1008,14 @@ function App() {
                   value={reservation.bankAccount}
                   onChange={(value) => patchField('bankAccount', value)}
                 />
+                <div className="source-stay-group span-2">
+                  <TextInput label="예약명" value={reservation.leadGuest} onChange={(value) => patchField('leadGuest', value)} />
+                  <div className="passenger-row">
+                    <NumberInput label="성인" value={reservation.adultCount} onChange={(value) => patchField('adultCount', value)} />
+                    <NumberInput label="아동" value={reservation.childCount} onChange={(value) => patchField('childCount', value)} />
+                    <NumberInput label="유아" value={reservation.infantCount} onChange={(value) => patchField('infantCount', value)} />
+                  </div>
+                </div>
               </div>
             </Step>
             )}

@@ -404,6 +404,14 @@ button { cursor: pointer; }
   align-items: start;
 }
 
+.source-stay-group {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
 .room-lines {
   display: grid;
   gap: 7px;
