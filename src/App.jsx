@@ -1704,28 +1704,6 @@ function App() {
             </Step>
             )}
           </div>
-          <div className="form-foot">
-            <button
-              className="btn btn-small"
-              type="button"
-              onClick={() => {
-                const index = workflowSteps.findIndex(([id]) => id === activeStep);
-                setActiveStep(workflowSteps[Math.max(0, index - 1)][0]);
-              }}
-            >
-              이전
-            </button>
-            <button
-              className="btn btn-small btn-primary"
-              type="button"
-              onClick={() => {
-                const index = workflowSteps.findIndex(([id]) => id === activeStep);
-                setActiveStep(workflowSteps[Math.min(workflowSteps.length - 1, index + 1)][0]);
-              }}
-            >
-              다음
-            </button>
-          </div>
         </section>
 
         <section className="panel preview-panel">
