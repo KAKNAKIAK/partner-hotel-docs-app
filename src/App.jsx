@@ -93,6 +93,62 @@ function createInitialReservation() {
   return { ...initialReservation, issueDate: todayDate() };
 }
 
+function emptyRoomLine(roomType = '', roomCount = 1) {
+  return {
+    id: makeId(),
+    roomType,
+    bedTypes: {
+      double: false,
+      twin: false,
+      doubleOrTwin: false,
+    },
+    roomCount,
+  };
+}
+
+function normalizeRoomLine(line, fallbackRoomType = '', fallbackRoomCount = 1) {
+  const bedTypes = line?.bedTypes || {};
+  return {
+    id: line?.id || makeId(),
+    roomType: line?.roomType || fallbackRoomType || '',
+    bedTypes: {
+      double: Boolean(bedTypes.double),
+      twin: Boolean(bedTypes.twin),
+      doubleOrTwin: Boolean(bedTypes.doubleOrTwin),
+    },
+    roomCount: Number(line?.roomCount || fallbackRoomCount || 1),
+  };
+}
+
+function getRoomLines(reservation) {
+  if (Array.isArray(reservation.roomLines) && reservation.roomLines.length) {
+    return reservation.roomLines.map((line) => normalizeRoomLine(line));
+  }
+  return [normalizeRoomLine(null, reservation.roomType, reservation.roomCount)];
+}
+
+function roomLineBedText(line) {
+  const labels = [];
+  if (line.bedTypes?.double) labels.push('더블');
+  if (line.bedTypes?.twin) labels.push('트윈');
+  if (line.bedTypes?.doubleOrTwin) labels.push('더블 OR 트윈');
+  return labels.join(', ');
+}
+
+function summarizeRoomLines(reservation) {
+  return getRoomLines(reservation)
+    .map((line) => {
+      const bedText = roomLineBedText(line);
+      const typeText = [line.roomType, bedText].filter(Boolean).join(' / ');
+      return `${typeText || '객실'} ${line.roomCount || 0}실`;
+    })
+    .join(', ');
+}
+
+function totalRoomCount(reservation) {
+  return getRoomLines(reservation).reduce((sum, line) => sum + Number(line.roomCount || 0), 0) || Number(reservation.roomCount || 1) || 1;
+}
+
 const LOCAL_DOC_VERSION = 1;
 const RECENT_FILES_KEY = 'partner-hotel-docs-recent-files';
 const HANDLE_DB_NAME = 'partner-hotel-docs-files';
@@ -412,6 +468,8 @@ function App() {
     if (reservation.roomType && !rooms.includes(reservation.roomType)) return [reservation.roomType, ...rooms];
     return rooms;
   }, [reservation.hotelRooms, reservation.roomType]);
+  const roomLines = useMemo(() => getRoomLines(reservation), [reservation.roomLines, reservation.roomType, reservation.roomCount]);
+  const roomSummary = useMemo(() => summarizeRoomLines(reservation), [reservation.roomLines, reservation.roomType, reservation.roomCount]);
   const foreignTotal = useMemo(
     () => reservation.charges.reduce((sum, line) => sum + lineTotal(line), 0),
     [reservation.charges]
@@ -534,13 +592,14 @@ function App() {
       hotelPhone: hotel.phone,
       hotelRooms: hotel.rooms || [],
       roomType: hotel.rooms?.[0] || '',
+      roomLines: [emptyRoomLine(hotel.rooms?.[0] || '', 1)],
       mealPlan: hotel.defaultMealPlan,
       customerNotice: hotel.defaultNotice,
     });
   }
 
   function addCharge(type) {
-    const roomCount = Number(reservation.roomCount || 1) || 1;
+    const roomCount = totalRoomCount(reservation);
     const adultCount = Number(reservation.adultCount || 1) || 1;
     const nights = autoNights || Number(reservation.statedNights || 1) || 1;
     const templates = {
@@ -562,6 +621,47 @@ function App() {
 
   function removeCharge(id) {
     patch({ charges: reservation.charges.filter((line) => line.id !== id) });
+  }
+
+  function syncRoomLinePatch(nextLines) {
+    const normalizedLines = nextLines.map((line) => normalizeRoomLine(line));
+    const firstLine = normalizedLines[0] || emptyRoomLine();
+    patch({
+      roomLines: normalizedLines,
+      roomType: firstLine.roomType,
+      roomCount: totalRoomCount({ ...reservation, roomLines: normalizedLines }),
+    });
+  }
+
+  function updateRoomLine(id, changes) {
+    syncRoomLinePatch(
+      roomLines.map((line) => (line.id === id ? { ...line, ...changes } : line))
+    );
+  }
+
+  function updateRoomLineBedType(id, key, checked) {
+    syncRoomLinePatch(
+      roomLines.map((line) =>
+        line.id === id
+          ? {
+              ...line,
+              bedTypes: {
+                ...line.bedTypes,
+                [key]: checked,
+              },
+            }
+          : line
+      )
+    );
+  }
+
+  function addRoomLine() {
+    syncRoomLinePatch([...roomLines, emptyRoomLine(roomOptions[0] || '', 1)]);
+  }
+
+  function removeRoomLine(id) {
+    if (roomLines.length <= 1) return;
+    syncRoomLinePatch(roomLines.filter((line) => line.id !== id));
   }
 
   function saveDraft() {
@@ -926,42 +1026,91 @@ function App() {
                   placeholder="호텔명을 입력하세요"
                 />
                 <TextInput label="확정번호" value={reservation.confirmNo} onChange={(value) => patchField('confirmNo', value)} />
-                <Field label="체크인">
-                  <input
-                    value={reservation.checkIn || ''}
-                    inputMode="numeric"
-                    placeholder="YYYY-MM-DD 또는 YYYYMMDD"
-                    aria-invalid={checkInError ? 'true' : 'false'}
-                    onBlur={handleCheckInBlur}
-                    onChange={(event) => handleCheckInChange(event.target.value)}
-                  />
-                  {checkInError && <p className="field-error">{checkInError}</p>}
-                </Field>
-                <Field label="박수">
-                  <input
-                    ref={nightsInputRef}
-                    type="number"
-                    min="0"
-                    value={reservation.statedNights}
-                    onChange={(event) => handleNightsChange(event.target.value)}
-                  />
-                </Field>
-                <Field label="체크아웃">
-                  <input className="readonly-input" value={reservation.checkOut || ''} placeholder="박수 입력 시 자동 계산" readOnly />
-                </Field>
-                <Field label="객실 타입">
-                  <select
-                    value={reservation.roomType || ''}
-                    onChange={(event) => patchField('roomType', event.target.value)}
-                    disabled={!roomOptions.length}
-                  >
-                    <option value="">{roomOptions.length ? '객실 타입 선택' : '호텔 마스터 객실 없음'}</option>
-                    {roomOptions.map((room) => (
-                      <option value={room} key={room}>{room}</option>
-                    ))}
-                  </select>
-                </Field>
-                <NumberInput label="객실 수" value={reservation.roomCount} onChange={(value) => patchField('roomCount', value)} />
+                <div className="booking-date-row span-2">
+                  <Field label="체크인">
+                    <input
+                      value={reservation.checkIn || ''}
+                      inputMode="numeric"
+                      placeholder="YYYY-MM-DD 또는 YYYYMMDD"
+                      aria-invalid={checkInError ? 'true' : 'false'}
+                      onBlur={handleCheckInBlur}
+                      onChange={(event) => handleCheckInChange(event.target.value)}
+                    />
+                    {checkInError && <p className="field-error">{checkInError}</p>}
+                  </Field>
+                  <Field label="박수">
+                    <input
+                      ref={nightsInputRef}
+                      type="number"
+                      min="0"
+                      value={reservation.statedNights}
+                      onChange={(event) => handleNightsChange(event.target.value)}
+                    />
+                  </Field>
+                  <Field label="체크아웃">
+                    <input className="readonly-input" value={reservation.checkOut || ''} placeholder="박수 입력 시 자동 계산" readOnly />
+                  </Field>
+                </div>
+                <div className="room-lines span-2">
+                  <div className="room-lines-header">
+                    <span>객실 구성</span>
+                    <button className="master-add room-line-add" type="button" onClick={addRoomLine} aria-label="객실 구성 추가">
+                      +
+                    </button>
+                  </div>
+                  {roomLines.map((line) => (
+                    <div className="room-line" key={line.id}>
+                      <Field label="객실 타입">
+                        <select
+                          value={line.roomType || ''}
+                          onChange={(event) => updateRoomLine(line.id, { roomType: event.target.value })}
+                          disabled={!roomOptions.length}
+                        >
+                          <option value="">{roomOptions.length ? '객실 타입 선택' : '호텔 마스터 객실 없음'}</option>
+                          {roomOptions.map((room) => (
+                            <option value={room} key={room}>{room}</option>
+                          ))}
+                        </select>
+                      </Field>
+                      <div className="bed-checks" aria-label="침대 타입">
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={line.bedTypes.double}
+                            onChange={(event) => updateRoomLineBedType(line.id, 'double', event.target.checked)}
+                          />
+                          더블
+                        </label>
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={line.bedTypes.twin}
+                            onChange={(event) => updateRoomLineBedType(line.id, 'twin', event.target.checked)}
+                          />
+                          트윈
+                        </label>
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={line.bedTypes.doubleOrTwin}
+                            onChange={(event) => updateRoomLineBedType(line.id, 'doubleOrTwin', event.target.checked)}
+                          />
+                          더블 OR 트윈
+                        </label>
+                      </div>
+                      <NumberInput label="객실 수" value={line.roomCount} onChange={(value) => updateRoomLine(line.id, { roomCount: value })} />
+                      <button
+                        className="icon-btn"
+                        type="button"
+                        aria-label="객실 구성 삭제"
+                        disabled={roomLines.length <= 1}
+                        onClick={() => removeRoomLine(line.id)}
+                      >
+                        x
+                      </button>
+                    </div>
+                  ))}
+                </div>
                 <TextInput label="레이트 체크아웃" value={reservation.lateCheckout} onChange={(value) => patchField('lateCheckout', value)} />
               </div>
             </Step>
@@ -2252,6 +2401,7 @@ function DocumentPreview({ tab, reservation, foreignTotal, krwTotal, warnings })
 }
 
 function Invoice({ reservation, foreignTotal, krwTotal }) {
+  const roomSummary = summarizeRoomLines(reservation);
   return (
     <article className="document">
       <div className="invoice-head">
@@ -2276,7 +2426,7 @@ function Invoice({ reservation, foreignTotal, krwTotal }) {
         <DocBox label="예약명" value={reservation.leadGuest} />
         <DocBox label="호텔" value={reservation.hotelName} />
         <DocBox label="투숙일" value={`${reservation.checkIn} - ${reservation.checkOut} / ${reservation.statedNights}박`} />
-        <DocBox label="객실" value={`${reservation.roomType} / ${reservation.roomCount}실`} />
+        <DocBox label="객실" value={roomSummary} />
       </div>
       <table>
         <thead>
@@ -2318,6 +2468,7 @@ function Invoice({ reservation, foreignTotal, krwTotal }) {
 }
 
 function Confirmation({ reservation }) {
+  const roomSummary = summarizeRoomLines(reservation);
   const pax = [
     reservation.adultCount ? `ADT ${reservation.adultCount}` : '',
     reservation.childCount ? `CHD ${reservation.childCount}` : '',
@@ -2341,7 +2492,7 @@ function Confirmation({ reservation }) {
         <DocBox label="체크인" value={reservation.checkIn} />
         <DocBox label="체크아웃" value={reservation.checkOut} />
         <DocBox label="숙박" value={`${reservation.statedNights}박`} />
-        <DocBox label="객실" value={`${reservation.roomType} / ${reservation.roomCount}실`} />
+        <DocBox label="객실" value={roomSummary} />
         <DocBox label="식사 조건" value={reservation.mealPlan} />
         <DocBox label="결제 조건" value={reservation.paymentTerms} />
       </div>

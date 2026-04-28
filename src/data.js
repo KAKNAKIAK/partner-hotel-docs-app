@@ -20,6 +20,7 @@ export const initialReservation = {
   hotelPhone: '',
   hotelRooms: [],
   roomType: '',
+  roomLines: [],
   checkIn: '',
   checkOut: '',
   statedNights: 0,
