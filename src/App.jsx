@@ -1384,7 +1384,6 @@ function App() {
         <section className="panel form-panel">
           <div className="panel-header">
             <h2>예약 원본 입력</h2>
-            <span className="status-chip">{reservation.status}</span>
           </div>
           <div className="step-nav" role="tablist" aria-label="입력 단계 선택">
             {workflowSteps.map(([id, number, label]) => (
@@ -1704,7 +1703,6 @@ function App() {
             >
               이전
             </button>
-            <span>{workflowSteps.find(([id]) => id === activeStep)?.[2]}</span>
             <button
               className="btn btn-small btn-primary"
               type="button"
