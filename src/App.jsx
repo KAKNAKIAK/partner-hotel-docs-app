@@ -188,7 +188,7 @@ function buildLocalHtml(reservation) {
     reservation,
   };
 
-  const title = `${reservation.leadGuest || '예약문서'} - 거래처 인보이스·호텔 확정서`;
+  const title = `${reservation.leadGuest || '예약문서'} - 인보이스& 바우처`;
 
   return `<!doctype html>
 <html lang="ko">
@@ -899,13 +899,9 @@ function App() {
     <>
       <header className="app-topbar">
         <div className="brand">
-          <div className="brand-kicker">Partner Hotel Docs</div>
-          <h1 className="brand-title">거래처 인보이스·호텔 확정서 작성</h1>
+          <h1 className="brand-title">인보이스& 바우처</h1>
         </div>
         <div className="top-summary" aria-label="예약 요약">
-          <Summary label="예약명" value={reservation.leadGuest || '-'} />
-          <Summary label="투숙일" value={`${reservation.checkIn || '-'} → ${reservation.checkOut || '-'}`} />
-          <Summary label="청구액" value={krw(krwTotal)} />
           <Summary label="검수" value={warnings.length ? `확인 ${warnings.length}건` : '정상'} />
         </div>
         <label className="header-date-field">
@@ -1296,9 +1292,14 @@ function App() {
             </div>
             <div className="side-body">
               <div className="metric-grid">
+                <Metric label="예약자명" value={reservation.leadGuest || '-'} />
+                <Metric label="체크인날짜" value={reservation.checkIn || '-'} />
+                <Metric
+                  label="청구액"
+                  value={`${money(foreignTotal, reservation.currency)} / ${krw(krwTotal)}`}
+                  wide
+                />
                 <Metric label="자동 박수" value={`${autoNights}박`} />
-                <Metric label="외화 합계" value={money(foreignTotal, reservation.currency)} />
-                <Metric label="원화 청구액" value={krw(krwTotal)} wide />
               </div>
               <div className="checklist">
                 {warnings.length ? (
