@@ -2971,7 +2971,7 @@ function Invoice({ reservation, foreignTotal, krwTotal }) {
         <DocBox label="투숙일" value={`${stayDateTime(reservation.checkIn, reservation.checkInTime)} - ${stayDateTime(reservation.checkOut, reservation.checkOutTime)} / ${reservation.statedNights}박`} />
         <DocBox label="객실" value={roomSummary} />
       </div>
-      <table>
+      <table className="invoice-charge-table">
         <thead>
           <tr>
             <th>항목</th>
