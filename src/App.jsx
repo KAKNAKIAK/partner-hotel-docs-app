@@ -106,7 +106,15 @@ function formatDateTime(value) {
 }
 
 function createInitialReservation() {
-  return { ...initialReservation, issueDate: todayDate(), noticeItems: [emptyNoticeItem()] };
+  return {
+    ...initialReservation,
+    issueDate: todayDate(),
+    hotelRooms: [],
+    roomLines: [emptyRoomLine('', 1)],
+    mealPlanDays: [],
+    noticeItems: [emptyNoticeItem()],
+    charges: [],
+  };
 }
 
 function emptyNoticeItem(content = '', options = {}) {
@@ -204,9 +212,11 @@ function summarizeRoomLines(reservation) {
     .map((line) => {
       const bedText = roomLineBedText(line);
       const typeText = [line.roomType, bedText].filter(Boolean).join(' ');
-      return `${typeText || '객실'} ${line.roomCount || 0}실`;
+      if (!typeText) return '';
+      return `${typeText} ${line.roomCount || 0}실`;
     })
-    .join(',\n');
+    .filter(Boolean)
+    .join(',\n') || '-';
 }
 
 function totalRoomCount(reservation) {
@@ -542,6 +552,7 @@ function App() {
   const [issueDateEditing, setIssueDateEditing] = useState(false);
   const [issueDateError, setIssueDateError] = useState('');
   const [exchangeSaveState, setExchangeSaveState] = useState('');
+  const [actionNotice, setActionNotice] = useState(null);
   const [phraseSnippets, setPhraseSnippets] = useState([]);
   const [phraseQuery, setPhraseQuery] = useState('');
   const [phrasePickerOpen, setPhrasePickerOpen] = useState(false);
@@ -568,6 +579,22 @@ function App() {
     document.addEventListener('click', closeRecentMenu);
     return () => document.removeEventListener('click', closeRecentMenu);
   }, []);
+
+  useEffect(() => {
+    if (!actionNotice) return undefined;
+    const timer = window.setTimeout(() => setActionNotice(null), 2600);
+    return () => window.clearTimeout(timer);
+  }, [actionNotice]);
+
+  useEffect(() => {
+    if (exchangeSaveState.includes('환율 저장 완료')) {
+      announceAction('환율 저장 완료');
+    } else if (exchangeSaveState.includes('환율 저장 실패')) {
+      announceAction('환율 저장 실패', 'error');
+    } else if (exchangeSaveState.includes('환율 저장 취소')) {
+      announceAction('환율 저장을 취소했습니다', 'info');
+    }
+  }, [exchangeSaveState]);
 
   useEffect(() => {
     function fitPrintPage() {
@@ -663,6 +690,10 @@ function App() {
     setReservation((current) => {
       return { ...current, [key]: value };
     });
+  }
+
+  function announceAction(message, type = 'success') {
+    setActionNotice({ id: makeId(), message, type });
   }
 
   function syncNoticeItems(nextItems) {
@@ -990,23 +1021,35 @@ function App() {
 
   function saveDraft() {
     setSaveState('저장 중');
+    announceAction('Supabase 저장 중...', 'info');
     saveReservation(reservation)
       .then((saved) => {
         setReservation((current) => ({ ...current, id: saved.id || current.id }));
         setSaveState('Supabase 저장 완료');
+        announceAction('Supabase 저장 완료');
       })
       .catch((error) => {
         console.error(error);
         setSaveState('Supabase 저장 실패');
+        announceAction('Supabase 저장 실패', 'error');
       });
   }
 
   function resetLocalDocument() {
     setReservation(createInitialReservation());
+    setActiveTab('invoice');
+    setActiveStep('source');
+    setCheckInError('');
+    setIssueDateError('');
+    setIssueDateEditing(false);
+    setPhraseQuery('');
+    setPhrasePickerOpen(false);
+    setActiveNoticeItemId('');
     setCurrentFileHandle(null);
     setCurrentFileId('');
     setCurrentFileName('');
     setSaveState('새 문서로 초기화했습니다.');
+    announceAction('초기화 완료');
   }
 
   function rememberRecentFile(name, handle, id = '') {
@@ -1068,6 +1111,7 @@ function App() {
       setCurrentFileId(nextId);
       setCurrentFileName(handle.name);
       setSaveState(`${handle.name} 저장 완료`);
+      announceAction('HTML 저장 완료');
       return;
     }
 
@@ -1075,6 +1119,7 @@ function App() {
     rememberRecentFile(fileName, null);
     setCurrentFileName(fileName);
     setSaveState(`${fileName} 다운로드 완료`);
+    announceAction('HTML 다운로드 완료');
   }
 
   async function saveLocalFile() {
@@ -1090,9 +1135,11 @@ function App() {
       setCurrentFileId(nextId);
       setCurrentFileName(currentFileHandle.name);
       setSaveState(`${currentFileHandle.name} 저장 완료`);
+      announceAction('HTML 저장 완료');
     } catch (error) {
       if (error?.name === 'AbortError') return;
       console.error(error);
+      announceAction('HTML 저장 실패', 'error');
       alert(error.message || 'HTML 파일을 저장하지 못했습니다.');
     }
   }
@@ -1103,6 +1150,7 @@ function App() {
     } catch (error) {
       if (error?.name === 'AbortError') return;
       console.error(error);
+      announceAction('HTML 저장 실패', 'error');
       alert(error.message || 'HTML 파일을 저장하지 못했습니다.');
     }
   }
@@ -1325,6 +1373,12 @@ function App() {
           />
         </div>
       </header>
+      {actionNotice && (
+        <div className={`action-toast ${actionNotice.type}`} role="status">
+          <strong>{actionNotice.type === 'error' ? '실패' : actionNotice.type === 'info' ? '진행' : '완료'}</strong>
+          <span>{actionNotice.message}</span>
+        </div>
+      )}
 
       <main className="app-shell">
         <section className="panel form-panel">
