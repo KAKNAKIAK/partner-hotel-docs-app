@@ -206,7 +206,7 @@ function summarizeRoomLines(reservation) {
       const typeText = [line.roomType, bedText].filter(Boolean).join(' ');
       return `${typeText || '객실'} ${line.roomCount || 0}실`;
     })
-    .join(', ');
+    .join(',\n');
 }
 
 function totalRoomCount(reservation) {
