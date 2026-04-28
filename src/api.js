@@ -1,35 +1,6 @@
 import { supabaseFetch } from './supabaseClient.js';
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const hotelTimeFallbackKey = 'partner-hotel-docs-hotel-times';
-
-function readHotelTimeFallbacks() {
-  if (typeof localStorage === 'undefined') return {};
-  try {
-    return JSON.parse(localStorage.getItem(hotelTimeFallbackKey) || '{}');
-  } catch {
-    return {};
-  }
-}
-
-function writeHotelTimeFallback(hotel) {
-  if (typeof localStorage === 'undefined' || !hotel?.id) return;
-  const current = readHotelTimeFallbacks();
-  current[hotel.id] = {
-    defaultCheckInTime: hotel.defaultCheckInTime || '',
-    defaultCheckOutTime: hotel.defaultCheckOutTime || '',
-  };
-  localStorage.setItem(hotelTimeFallbackKey, JSON.stringify(current));
-}
-
-function mergeHotelTimeFallback(hotel) {
-  const fallback = readHotelTimeFallbacks()[hotel.id] || {};
-  return {
-    ...hotel,
-    defaultCheckInTime: hotel.defaultCheckInTime || fallback.defaultCheckInTime || '',
-    defaultCheckOutTime: hotel.defaultCheckOutTime || fallback.defaultCheckOutTime || '',
-  };
-}
 
 function partnerFromRow(item) {
   return {
@@ -45,7 +16,7 @@ function partnerFromRow(item) {
 }
 
 function hotelFromRow(item) {
-  return mergeHotelTimeFallback({
+  return {
     id: item.id,
     name: item.name || '',
     koreanName: item.korean_name || '',
@@ -59,14 +30,10 @@ function hotelFromRow(item) {
     defaultCheckInTime: item.default_check_in_time || '',
     defaultCheckOutTime: item.default_check_out_time || '',
     rooms: Array.isArray(item.rooms) ? item.rooms : [],
-  });
+  };
 }
 
-function isMissingHotelTimeColumn(error) {
-  return String(error?.message || error).includes('default_check_');
-}
-
-function hotelPayload(hotel, includeDefaultTimes = true) {
+function hotelPayload(hotel) {
   return {
     name: hotel.name,
     korean_name: hotel.koreanName || null,
@@ -77,10 +44,8 @@ function hotelPayload(hotel, includeDefaultTimes = true) {
     phone: hotel.phone || null,
     default_notice: hotel.defaultNotice || null,
     default_meal_plan: hotel.defaultMealPlan || null,
-    ...(includeDefaultTimes ? {
-      default_check_in_time: hotel.defaultCheckInTime || null,
-      default_check_out_time: hotel.defaultCheckOutTime || null,
-    } : {}),
+    default_check_in_time: hotel.defaultCheckInTime || null,
+    default_check_out_time: hotel.defaultCheckOutTime || null,
     rooms: hotel.rooms || [],
   };
 }
@@ -353,47 +318,22 @@ export async function searchHotels(query = '') {
 }
 
 export async function createHotel(hotel) {
-  try {
-    const data = await supabaseFetch('hotels?select=*', {
-      method: 'POST',
-      body: JSON.stringify(hotelPayload(hotel)),
-    });
-    return hotelFromRow(data[0]);
-  } catch (error) {
-    if (!isMissingHotelTimeColumn(error)) throw error;
-    const data = await supabaseFetch('hotels?select=*', {
-      method: 'POST',
-      body: JSON.stringify(hotelPayload(hotel, false)),
-    });
-    const saved = { ...hotelFromRow(data[0]), defaultCheckInTime: hotel.defaultCheckInTime || '', defaultCheckOutTime: hotel.defaultCheckOutTime || '', _hotelTimeStorageFallback: true };
-    writeHotelTimeFallback(saved);
-    return saved;
-  }
+  const data = await supabaseFetch('hotels?select=*', {
+    method: 'POST',
+    body: JSON.stringify(hotelPayload(hotel)),
+  });
+  return hotelFromRow(data[0]);
 }
 
 export async function updateHotel(hotel) {
-  try {
-    const data = await supabaseFetch(`hotels?id=eq.${hotel.id}&select=*`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        ...hotelPayload(hotel),
-        updated_at: new Date().toISOString(),
-      }),
-    });
-    return hotelFromRow(data[0]);
-  } catch (error) {
-    if (!isMissingHotelTimeColumn(error)) throw error;
-    const data = await supabaseFetch(`hotels?id=eq.${hotel.id}&select=*`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        ...hotelPayload(hotel, false),
-        updated_at: new Date().toISOString(),
-      }),
-    });
-    const saved = { ...hotelFromRow(data[0]), defaultCheckInTime: hotel.defaultCheckInTime || '', defaultCheckOutTime: hotel.defaultCheckOutTime || '', _hotelTimeStorageFallback: true };
-    writeHotelTimeFallback(saved);
-    return saved;
-  }
+  const data = await supabaseFetch(`hotels?id=eq.${hotel.id}&select=*`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      ...hotelPayload(hotel),
+      updated_at: new Date().toISOString(),
+    }),
+  });
+  return hotelFromRow(data[0]);
 }
 
 export async function deleteHotel(id) {

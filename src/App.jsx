@@ -1601,7 +1601,7 @@ function MasterDataManager({ onClose }) {
       })
       .catch((error) => {
         console.error(error);
-        setMasterState('호텔 수정 실패');
+        setMasterState(String(error?.message || error).includes('default_check_') ? '호텔 수정 실패 - DB 컬럼을 먼저 추가해 주세요' : '호텔 수정 실패');
       });
   }
 
@@ -1928,7 +1928,7 @@ function MasterDataManager({ onClose }) {
     updateHotel(selectedHotel)
       .then((saved) => {
         setHotels((current) => current.map((hotel) => (hotel.id === saved.id ? saved : hotel)));
-        setMasterState(saved._hotelTimeStorageFallback ? '호텔 수정 완료 - 체크인·체크아웃은 이 브라우저에 임시 저장됨' : '호텔 수정 완료');
+        setMasterState('호텔 수정 완료');
       })
       .catch((error) => {
         console.error(error);
