@@ -320,6 +320,12 @@ export async function searchPartners(query = '') {
   return data.map(partnerFromRow);
 }
 
+export async function getPartnerById(id) {
+  if (!id) return null;
+  const data = await supabaseFetch(`partners?id=eq.${id}&select=*`);
+  return data[0] ? partnerFromRow(data[0]) : null;
+}
+
 export async function createPartner(partner) {
   const data = await supabaseFetch('partners?select=*', {
     method: 'POST',
@@ -365,6 +371,12 @@ export async function searchHotels(query = '') {
   });
   const data = await supabaseFetch(`hotels?${params.toString()}`);
   return data.map(hotelFromRow);
+}
+
+export async function getHotelById(id) {
+  if (!id) return null;
+  const data = await supabaseFetch(`hotels?id=eq.${id}&select=*`);
+  return data[0] ? hotelFromRow(data[0]) : null;
 }
 
 export async function createHotel(hotel) {

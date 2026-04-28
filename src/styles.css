@@ -17,7 +17,8 @@
   --red-soft: #fff1f2;
   --shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
   --print-scale: 1;
-  font-family: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+  --app-font: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", system-ui, sans-serif;
+  font-family: var(--app-font);
 }
 
 * { box-sizing: border-box; }
@@ -27,6 +28,7 @@ body {
   overflow: hidden;
   background: var(--app-bg);
   color: var(--ink);
+  font-family: var(--app-font);
   letter-spacing: 0;
 }
 
@@ -1384,7 +1386,7 @@ th.num {
   display: block;
   margin-top: 6px;
   color: #142a4c;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--app-font);
   font-size: 31px;
   line-height: 1;
   font-style: normal;

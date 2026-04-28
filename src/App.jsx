@@ -14,6 +14,8 @@ import {
   deletePartner,
   deletePhraseSnippet,
   deleteRegion,
+  getHotelById,
+  getPartnerById,
   listCountries,
   listCompanyInfos,
   listExchangeRates,
@@ -308,7 +310,7 @@ function buildLocalHtml(reservation) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${title.replace(/[<>&"]/g, '')}</title>
   <style>
-    body { margin: 0; font-family: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif; background: #edf1f6; color: #172033; }
+    body { margin: 0; font-family: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", system-ui, sans-serif; background: #edf1f6; color: #172033; }
     main { max-width: 760px; margin: 12vh auto; padding: 28px; border: 1px solid #d9e0ea; border-radius: 10px; background: #fff; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08); }
     h1 { margin: 0 0 8px; font-size: 24px; }
     p { margin: 8px 0; color: #667084; line-height: 1.6; }
@@ -669,6 +671,53 @@ function App() {
       ignore = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!reservation.partnerId || reservation.partnerCiUrl) return undefined;
+    let ignore = false;
+    getPartnerById(reservation.partnerId)
+      .then((partner) => {
+        if (ignore || !partner) return;
+        setReservation((current) => (
+          current.partnerId === partner.id && !current.partnerCiUrl
+            ? {
+                ...current,
+                partnerCiUrl: partner.ciUrl || '',
+                partnerName: partner.recipientName || partner.name || current.partnerName,
+              }
+            : current
+        ));
+      })
+      .catch((error) => console.error(error));
+    return () => {
+      ignore = true;
+    };
+  }, [reservation.partnerId, reservation.partnerCiUrl]);
+
+  useEffect(() => {
+    if (!reservation.hotelId || reservation.hotelLogoUrl) return undefined;
+    let ignore = false;
+    getHotelById(reservation.hotelId)
+      .then((hotel) => {
+        if (ignore || !hotel) return;
+        setReservation((current) => (
+          current.hotelId === hotel.id && !current.hotelLogoUrl
+            ? {
+                ...current,
+                hotelName: hotel.name || current.hotelName,
+                hotelAddress: hotel.address || current.hotelAddress,
+                hotelPhone: hotel.phone || current.hotelPhone,
+                hotelLogoUrl: hotel.logoUrl || '',
+                hotelRooms: hotel.rooms || current.hotelRooms,
+              }
+            : current
+        ));
+      })
+      .catch((error) => console.error(error));
+    return () => {
+      ignore = true;
+    };
+  }, [reservation.hotelId, reservation.hotelLogoUrl]);
 
   const autoNights = calcNights(reservation.checkIn, reservation.checkOut);
   const roomOptions = useMemo(() => {
