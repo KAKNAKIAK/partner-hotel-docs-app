@@ -93,6 +93,142 @@ function createInitialReservation() {
   return { ...initialReservation, issueDate: todayDate() };
 }
 
+const LOCAL_DOC_VERSION = 1;
+const RECENT_FILES_KEY = 'partner-hotel-docs-recent-files';
+const HANDLE_DB_NAME = 'partner-hotel-docs-files';
+const HANDLE_STORE_NAME = 'file-handles';
+
+function sanitizeFileName(value) {
+  return String(value || '')
+    .trim()
+    .replace(/[\\/:*?"<>|]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .slice(0, 80);
+}
+
+function defaultLocalFileName(reservation) {
+  const guest = sanitizeFileName(reservation.leadGuest) || '예약문서';
+  const hotel = sanitizeFileName(reservation.hotelName);
+  const date = sanitizeFileName(reservation.issueDate) || todayDate();
+  return [date, guest, hotel].filter(Boolean).join('_') + '.html';
+}
+
+function escapeScriptJson(value) {
+  return JSON.stringify(value, null, 2).replace(/</g, '\\u003c');
+}
+
+function buildLocalHtml(reservation) {
+  const payload = {
+    app: 'partner-hotel-docs-app',
+    version: LOCAL_DOC_VERSION,
+    savedAt: new Date().toISOString(),
+    reservation,
+  };
+
+  const title = `${reservation.leadGuest || '예약문서'} - 거래처 인보이스·호텔 확정서`;
+
+  return `<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${title.replace(/[<>&"]/g, '')}</title>
+  <style>
+    body { margin: 0; font-family: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif; background: #edf1f6; color: #172033; }
+    main { max-width: 760px; margin: 12vh auto; padding: 28px; border: 1px solid #d9e0ea; border-radius: 10px; background: #fff; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08); }
+    h1 { margin: 0 0 8px; font-size: 24px; }
+    p { margin: 8px 0; color: #667084; line-height: 1.6; }
+    dl { display: grid; grid-template-columns: 120px 1fr; gap: 8px 14px; margin-top: 22px; }
+    dt { color: #667084; font-weight: 800; }
+    dd { margin: 0; font-weight: 800; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>거래처 인보이스·호텔 확정서 저장 파일</h1>
+    <p>이 HTML 파일은 Partner Hotel Docs 앱에서 다시 불러올 수 있는 로컬 저장 파일입니다.</p>
+    <dl>
+      <dt>예약명</dt><dd>${reservation.leadGuest || '-'}</dd>
+      <dt>호텔</dt><dd>${reservation.hotelName || '-'}</dd>
+      <dt>체크인</dt><dd>${reservation.checkIn || '-'}</dd>
+      <dt>저장일시</dt><dd>${payload.savedAt}</dd>
+    </dl>
+  </main>
+  <script id="partner-hotel-docs-data" type="application/json">${escapeScriptJson(payload)}</script>
+</body>
+</html>`;
+}
+
+function parseLocalHtml(text) {
+  const documentNode = new DOMParser().parseFromString(text, 'text/html');
+  const dataNode = documentNode.getElementById('partner-hotel-docs-data');
+  if (!dataNode?.textContent) {
+    throw new Error('Partner Hotel Docs 저장 데이터가 없는 HTML 파일입니다.');
+  }
+
+  const payload = JSON.parse(dataNode.textContent);
+  if (payload?.app !== 'partner-hotel-docs-app' || !payload.reservation) {
+    throw new Error('이 앱에서 저장한 HTML 파일이 아닙니다.');
+  }
+
+  return payload.reservation;
+}
+
+function readRecentFiles() {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_FILES_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function writeRecentFiles(items) {
+  localStorage.setItem(RECENT_FILES_KEY, JSON.stringify(items.slice(0, 8)));
+}
+
+function openHandleDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(HANDLE_DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore(HANDLE_STORE_NAME);
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function storeFileHandle(id, handle) {
+  if (!handle || !window.indexedDB) return;
+  const db = await openHandleDb();
+  await new Promise((resolve, reject) => {
+    const transaction = db.transaction(HANDLE_STORE_NAME, 'readwrite');
+    transaction.objectStore(HANDLE_STORE_NAME).put(handle, id);
+    transaction.oncomplete = resolve;
+    transaction.onerror = () => reject(transaction.error);
+  });
+  db.close();
+}
+
+async function readFileHandle(id) {
+  if (!window.indexedDB) return null;
+  const db = await openHandleDb();
+  const handle = await new Promise((resolve, reject) => {
+    const transaction = db.transaction(HANDLE_STORE_NAME, 'readonly');
+    const request = transaction.objectStore(HANDLE_STORE_NAME).get(id);
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error);
+  });
+  db.close();
+  return handle;
+}
+
+async function verifyFilePermission(handle, mode = 'read') {
+  if (!handle?.queryPermission || !handle?.requestPermission) return true;
+  const options = { mode };
+  if ((await handle.queryPermission(options)) === 'granted') return true;
+  return (await handle.requestPermission(options)) === 'granted';
+}
+
 function lineTotal(line) {
   return Number(line.unitPrice || 0) * Number(line.quantity || 0) * Number(line.nights || 0);
 }
@@ -244,7 +380,13 @@ function App() {
   const [saveState, setSaveState] = useState('');
   const [masterOpen, setMasterOpen] = useState(false);
   const [checkInError, setCheckInError] = useState('');
+  const [currentFileHandle, setCurrentFileHandle] = useState(null);
+  const [currentFileId, setCurrentFileId] = useState('');
+  const [currentFileName, setCurrentFileName] = useState('');
+  const [recentFiles, setRecentFiles] = useState(() => readRecentFiles());
+  const [recentOpen, setRecentOpen] = useState(false);
   const nightsInputRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (!masterOpen) return undefined;
@@ -254,6 +396,15 @@ function App() {
       document.body.style.overflow = previousOverflow;
     };
   }, [masterOpen]);
+
+  useEffect(() => {
+    function closeRecentMenu(event) {
+      if (!event.target.closest?.('.recent-menu-wrap')) setRecentOpen(false);
+    }
+
+    document.addEventListener('click', closeRecentMenu);
+    return () => document.removeEventListener('click', closeRecentMenu);
+  }, []);
 
   const autoNights = calcNights(reservation.checkIn, reservation.checkOut);
   const roomOptions = useMemo(() => {
@@ -426,6 +577,183 @@ function App() {
       });
   }
 
+  function resetLocalDocument() {
+    setReservation(createInitialReservation());
+    setCurrentFileHandle(null);
+    setCurrentFileId('');
+    setCurrentFileName('');
+    setSaveState('새 문서로 초기화했습니다.');
+  }
+
+  function rememberRecentFile(name, handle, id = '') {
+    const fileId = id || (handle ? `${Date.now()}-${Math.random().toString(36).slice(2)}` : '');
+    const nextItem = {
+      id: fileId,
+      name: name || '저장 파일.html',
+      savedAt: new Date().toISOString(),
+      canReopen: Boolean(handle && fileId),
+    };
+    const nextItems = [nextItem, ...recentFiles.filter((item) => item.id !== fileId && item.name !== nextItem.name)];
+    setRecentFiles(nextItems.slice(0, 8));
+    writeRecentFiles(nextItems);
+    if (handle && fileId) {
+      storeFileHandle(fileId, handle).catch((error) => console.error(error));
+    }
+    return fileId;
+  }
+
+  async function writeHtmlToHandle(handle, html) {
+    if (!(await verifyFilePermission(handle, 'readwrite'))) {
+      throw new Error('파일 저장 권한이 허용되지 않았습니다.');
+    }
+
+    const writable = await handle.createWritable();
+    await writable.write(html);
+    await writable.close();
+  }
+
+  function downloadLocalHtml(fileName, html) {
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function saveLocalAs() {
+    const fileName = defaultLocalFileName(reservation);
+    const html = buildLocalHtml(reservation);
+
+    if (window.showSaveFilePicker) {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: fileName,
+        types: [
+          {
+            description: 'HTML 저장 파일',
+            accept: { 'text/html': ['.html'] },
+          },
+        ],
+      });
+      await writeHtmlToHandle(handle, html);
+      const nextId = rememberRecentFile(handle.name, handle);
+      setCurrentFileHandle(handle);
+      setCurrentFileId(nextId);
+      setCurrentFileName(handle.name);
+      setSaveState(`${handle.name} 저장 완료`);
+      return;
+    }
+
+    downloadLocalHtml(fileName, html);
+    rememberRecentFile(fileName, null);
+    setCurrentFileName(fileName);
+    setSaveState(`${fileName} 다운로드 완료`);
+  }
+
+  async function saveLocalFile() {
+    try {
+      if (!currentFileHandle) {
+        await saveLocalAs();
+        return;
+      }
+
+      const html = buildLocalHtml(reservation);
+      await writeHtmlToHandle(currentFileHandle, html);
+      const nextId = rememberRecentFile(currentFileHandle.name, currentFileHandle, currentFileId);
+      setCurrentFileId(nextId);
+      setCurrentFileName(currentFileHandle.name);
+      setSaveState(`${currentFileHandle.name} 저장 완료`);
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+      console.error(error);
+      alert(error.message || 'HTML 파일을 저장하지 못했습니다.');
+    }
+  }
+
+  async function saveLocalFileAs() {
+    try {
+      await saveLocalAs();
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+      console.error(error);
+      alert(error.message || 'HTML 파일을 저장하지 못했습니다.');
+    }
+  }
+
+  function loadLocalReservationFromText(text, fileName, handle = null, id = '') {
+    const loaded = parseLocalHtml(text);
+    setReservation({ ...createInitialReservation(), ...loaded });
+    setCurrentFileHandle(handle);
+    setCurrentFileId(id);
+    setCurrentFileName(fileName || '');
+    if (fileName) rememberRecentFile(fileName, handle, id);
+    setSaveState(`${fileName || 'HTML 파일'} 불러오기 완료`);
+  }
+
+  async function loadLocalFile() {
+    try {
+      if (window.showOpenFilePicker) {
+        const [handle] = await window.showOpenFilePicker({
+          multiple: false,
+          types: [
+            {
+              description: 'HTML 저장 파일',
+              accept: { 'text/html': ['.html', '.htm'] },
+            },
+          ],
+        });
+        if (!(await verifyFilePermission(handle, 'read'))) return;
+        const file = await handle.getFile();
+        loadLocalReservationFromText(await file.text(), file.name, handle);
+        return;
+      }
+
+      fileInputRef.current?.click();
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+      console.error(error);
+      alert(error.message || 'HTML 파일을 불러오지 못했습니다.');
+    }
+  }
+
+  async function handleLocalFileInput(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    try {
+      loadLocalReservationFromText(await file.text(), file.name);
+    } catch (error) {
+      console.error(error);
+      alert(error.message || 'HTML 파일을 불러오지 못했습니다.');
+    }
+  }
+
+  async function openRecentFile(item) {
+    setRecentOpen(false);
+    if (!item.canReopen || !item.id) {
+      alert('브라우저 권한이 없는 최근 항목입니다. 불러오기 버튼으로 파일을 직접 선택해 주세요.');
+      return;
+    }
+
+    try {
+      const handle = await readFileHandle(item.id);
+      if (!handle) {
+        alert('최근 파일 권한을 찾지 못했습니다. 불러오기 버튼으로 다시 선택해 주세요.');
+        return;
+      }
+      if (!(await verifyFilePermission(handle, 'read'))) return;
+      const file = await handle.getFile();
+      loadLocalReservationFromText(await file.text(), file.name, handle, item.id);
+    } catch (error) {
+      console.error(error);
+      alert(error.message || '최근 파일을 열지 못했습니다.');
+    }
+  }
+
   function loadDraft() {
     loadLatestReservation()
       .then((saved) => {
@@ -476,21 +804,55 @@ function App() {
           />
         </label>
         <div className="toolbar">
-          <button className="btn" type="button" onClick={() => setReservation(createInitialReservation())}>
+          <button className="btn" type="button" onClick={resetLocalDocument}>
             초기화
           </button>
-          <button className="btn" type="button" onClick={saveDraft}>
-            임시 저장
+          <button className="btn btn-primary" type="button" onClick={saveLocalFile}>
+            저장
           </button>
-          <button className="btn" type="button" onClick={loadDraft}>
+          <button className="btn" type="button" onClick={saveLocalFileAs}>
+            다른 이름으로 저장
+          </button>
+          <button className="btn" type="button" onClick={loadLocalFile}>
             불러오기
           </button>
+          <div className="recent-menu-wrap">
+            <button
+              className="btn"
+              type="button"
+              aria-expanded={recentOpen}
+              onClick={(event) => {
+                event.stopPropagation();
+                setRecentOpen((open) => !open);
+              }}
+            >
+              최근파일
+            </button>
+            {recentOpen && (
+              <div className="recent-menu">
+                {recentFiles.length === 0 && <div className="recent-empty">최근 파일이 없습니다.</div>}
+                {recentFiles.map((item) => (
+                  <button key={`${item.id}-${item.name}`} type="button" onClick={() => openRecentFile(item)}>
+                    <strong>{item.name}</strong>
+                    <span>{new Date(item.savedAt).toLocaleString('ko-KR')}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button className="btn" type="button" onClick={() => setMasterOpen(true)}>
             마스터 관리
           </button>
-          <button className="btn btn-primary" type="button" onClick={() => window.print()}>
+          <button className="btn" type="button" onClick={() => window.print()}>
             인쇄 / PDF
           </button>
+          <input
+            ref={fileInputRef}
+            className="visually-hidden"
+            type="file"
+            accept=".html,.htm,text/html"
+            onChange={handleLocalFileInput}
+          />
         </div>
       </header>
 
@@ -759,6 +1121,7 @@ function App() {
             <div className="side-body">
               <p className="quick-note">
                 현재 데이터 소스: {hasSupabaseConfig ? 'Supabase' : 'Supabase 환경변수 미설정'}<br />
+                현재 파일: {currentFileName || '새 문서'}<br />
                 {saveState || '검색, 저장, 마스터 관리는 Supabase DB와 직접 연결됩니다.'}
               </p>
             </div>
